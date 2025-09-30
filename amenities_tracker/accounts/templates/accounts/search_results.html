@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Nearby HDB Resale Flats</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        th { background-color: #f2f2f2; }
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Nearby Flats (within 3 km)</h2>
+
+{% if flats %}
+    <table>
+        <tr>
+            <th>Town</th>
+            <th>Flat Type</th>
+            <th>Model</th>
+            <th>Floor Area (sqm)</th>
+            <th>Lease Commence</th>
+            <th>Price (S$)</th>
+            <th>Distance (km)</th>
+        </tr>
+        {% for f in flats %}
+        <tr>
+            <td>{{ f.town }}</td>
+            <td>{{ f.flat_type }}</td>
+            <td>{{ f.model }}</td>
+            <td>{{ f.floor_area }}</td>
+            <td>{{ f.lease_commence }}</td>
+            <td>{{ f.resale_price }}</td>
+            <td>{{ f.distance }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+ <!-- Map container -->
+<div id="map" style="height: 500px;"></div>
+
+<!-- Hidden JSON data -->
+{{ flats|json_script:"flats-data" }}
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    // Get center coordinates from Django
+    var center = [parseFloat("{{ center_lat }}"), parseFloat("{{ center_lng }}")];
+
+
+    // Parse flats JSON from the hidden script
+    var flats = JSON.parse(document.getElementById("flats-data").textContent);
+
+    // Initialize map
+    var map = L.map("map").setView(center, 14);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors"
+    }).addTo(map);
+
+    // Add markers
+    flats.forEach(f => {
+        if (f.latitude && f.longitude) {
+            L.marker([f.latitude, f.longitude])
+              .addTo(map)
+              .bindPopup(
+                `<b>${f.town}</b><br>${f.flat_type}<br>Price: $${f.resale_price}<br>Distance: ${f.distance} km`
+              );
+        }
+    });
+</script>
+
+<!-- Debug -->
+<p>
+    Center coordinates: Latitude = {{ center_lat }}, Longitude = {{ center_lng }}
+</p>
+
+
+{% else %}
+    <p>No flats found within 3 km of that postal code.</p>
+{% endif %}
+
+</body>
+</html>

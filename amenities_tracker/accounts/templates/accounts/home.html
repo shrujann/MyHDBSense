@@ -1,0 +1,20 @@
+<h2>Welcome, {{ user.username }}!</h2>
+
+{% if user.is_authenticated %}
+    <p>You are logged in as {{ user.email }}</p>
+    <form action="{% url 'logout' %}" method="post">
+        {% csrf_token %}
+        <button type="submit">Logout</button>
+    </form>
+{% else %}
+    <p>You are not logged in.</p>
+    <a href="{% url 'login' %}"><button>Login</button></a>
+{% endif %}
+<a href="{% url 'register' %}"><button>Register</button></a>
+
+<h2>Search HDB Resale Flats</h2>
+<form method="get" action="{% url 'search_flats' %}">
+    <input type="text" name="q" placeholder="Enter postal code" required>
+    <button type="submit">Search</button>
+</form>
+
