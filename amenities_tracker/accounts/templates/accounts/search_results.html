@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+    {% load static %}
 <head>
     <meta charset="UTF-8">
     <title>Nearby HDB Resale Flats</title>
@@ -61,7 +62,6 @@
     // Get center coordinates from Django
     var center = [parseFloat("{{ center_lat }}"), parseFloat("{{ center_lng }}")];
 
-
     // Parse flats JSON from the hidden script
     var flats = JSON.parse(document.getElementById("flats-data").textContent);
 
@@ -71,10 +71,26 @@
         attribution: "© OpenStreetMap contributors"
     }).addTo(map);
 
-    // Add markers
+    // Step 2: Draw a 3 km radius circle around center
+    var circle = L.circle(center, {
+        radius: 3000,  // 3000 meters = 3 km
+        color: "blue",
+        fillColor: "#cce5ff",
+        fillOpacity: 0.2
+    }).addTo(map);
+
+    // Step 3: Define a custom house icon
+    var houseIcon = L.icon({
+        iconUrl: "{% static 'accounts/icons/house.svg' %}", // place house.svg in static/accounts/icons
+        iconSize: [30, 30],  // adjust size as needed
+        iconAnchor: [15, 30], // so it points at the location properly
+        popupAnchor: [0, -28]
+    });
+
+    // Step 4: Add markers with custom icon
     flats.forEach(f => {
         if (f.latitude && f.longitude) {
-            L.marker([f.latitude, f.longitude])
+            L.marker([f.latitude, f.longitude], {icon: houseIcon})
               .addTo(map)
               .bindPopup(
                 `<b>${f.town}</b><br>${f.flat_type}<br>Price: $${f.resale_price}<br>Distance: ${f.distance} km`
@@ -82,6 +98,7 @@
         }
     });
 </script>
+
 
 <!-- Debug -->
 <p>
