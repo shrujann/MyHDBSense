@@ -93,6 +93,10 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # during devel
 # Session management
 SESSION_EXIRE_AT_BROWSER_CLOSE = True  # session expires when browser is closed
 
+# OneMap Token (Replace with your actual token)
+ONEMAP_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5MjIwLCJmb3JldmVyIjpmYWxzZSwiaXNzIjoiT25lTWFwIiwiaWF0IjoxNzU5MjE4MDY3LCJuYmYiOjE3NTkyMTgwNjcsImV4cCI6MTc1OTQ3NzI2NywianRpIjoiOGM4ODA3MmYtZTJjMy00NDMwLWI5MjAtZDE5ZGI1NDdiNjY0In0.HERG6RZoG2AqG8r3SWuqh3TP2OzR-X36cj0SV_rjukwRYl4nTbLzcEdWEkgN3Es5Px-UuJPiHD3GmPwV2GvjzWLIEoSJtUbFql2NMWkSGIiZRfELxWdL0TJC1cKqGPVJq7l9CxrOtrqf1lucQZ6IrWqSlT6e9V33wutqENl9cO5DkmMUmgJ91bm0uAG42GVZdoH92arq8xY2oMzE_VDDsvWk9Kgj5y-PggNiLHM-dioTzLfFX1lT6LfONYwGIerGeMFIkSs6Vlz0Qu13lpHKJg8hHgkVElkKuVHaOSwwPmrAL_xBX5LnIuZWqPv0MrjBep8d-vJ_h0muV2r3h-5y7g"
+
+
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 

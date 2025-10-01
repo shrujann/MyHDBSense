@@ -8,6 +8,7 @@ import pandas as pd
 from math import radians, sin, cos, sqrt, atan2
 import concurrent.futures
 import json
+from django.conf import settings
 
 # registeration view
 def register(request):
@@ -89,8 +90,6 @@ def home(request):
 
 # search for flats within 3km of postal code
 
-ONEMAP_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5MjIwLCJmb3JldmVyIjpmYWxzZSwiaXNzIjoiT25lTWFwIiwiaWF0IjoxNzU5MjE4MDY3LCJuYmYiOjE3NTkyMTgwNjcsImV4cCI6MTc1OTQ3NzI2NywianRpIjoiOGM4ODA3MmYtZTJjMy00NDMwLWI5MjAtZDE5ZGI1NDdiNjY0In0.HERG6RZoG2AqG8r3SWuqh3TP2OzR-X36cj0SV_rjukwRYl4nTbLzcEdWEkgN3Es5Px-UuJPiHD3GmPwV2GvjzWLIEoSJtUbFql2NMWkSGIiZRfELxWdL0TJC1cKqGPVJq7l9CxrOtrqf1lucQZ6IrWqSlT6e9V33wutqENl9cO5DkmMUmgJ91bm0uAG42GVZdoH92arq8xY2oMzE_VDDsvWk9Kgj5y-PggNiLHM-dioTzLfFX1lT6LfONYwGIerGeMFIkSs6Vlz0Qu13lpHKJg8hHgkVElkKuVHaOSwwPmrAL_xBX5LnIuZWqPv0MrjBep8d-vJ_h0muV2r3h-5y7g"
-
 def search_flats(request):
     postal_code = request.GET.get("q")
     flats = []
@@ -102,7 +101,7 @@ def search_flats(request):
                 f"https://www.onemap.gov.sg/api/common/elastic/search"
                 f"?searchVal={postal_code}&returnGeom=Y&getAddrDetails=Y&pageNum=1"
             )
-            headers = {"Authorization": ONEMAP_TOKEN}
+            headers = {"Authorization": settings.ONEMAP_TOKEN}
             resp = requests.get(url, headers=headers, timeout=10).json()
             if resp.get("found", 0) > 0:
                 lat = float(resp["results"][0]["LATITUDE"])
@@ -139,7 +138,7 @@ def search_flats(request):
         # Step 3: Fetch flats from the user's town
         if lat and lon and postal_towns:
             dataset_id = "f1765b54-a209-4718-8d38-a39237f502b3" # HDB resale flats dataset : 2024 onward
-            headers = {"Authorization": ONEMAP_TOKEN}
+            headers = {"Authorization": settings.ONEMAP_TOKEN}
             months = [f"2025-{str(m).zfill(2)}" for m in range(1, 10)]  # '2025-01' to '2025-09'
             all_records = []
 
