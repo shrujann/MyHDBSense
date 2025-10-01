@@ -6,6 +6,8 @@ from .models import CustomUser
 import requests
 import pandas as pd
 from math import radians, sin, cos, sqrt, atan2
+import concurrent.futures
+import json
 
 # registeration view
 def register(request):
@@ -85,27 +87,7 @@ def logout_view(request):
 def home(request):
     return render(request, "accounts/home.html")  # render the home page
 
-# search view
-
-def haversine(lat1, lon1, lat2, lon2):
-    R = 6371.0  # Earth radius in kilometers
-    dlat = radians(lat2 - lat1)
-    dlon = radians(lon2 - lon1)
-    a = sin(dlat / 2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    distance = R * c
-    return distance
-
-def get_bounding_box(lat, lon, radius_km):
-    # Approximate calculation for small distances
-    delta_lat = radius_km / 111  # 1 deg latitude ~ 111km
-    delta_lon = radius_km / (111 * cos(radians(lat)))
-    return [
-        (lat + delta_lat, lon + delta_lon),  # NE
-        (lat + delta_lat, lon - delta_lon),  # NW
-        (lat - delta_lat, lon + delta_lon),  # SE
-        (lat - delta_lat, lon - delta_lon),  # SW
-    ]
+# search for flats within 3km of postal code
 
 ONEMAP_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5MjIwLCJmb3JldmVyIjpmYWxzZSwiaXNzIjoiT25lTWFwIiwiaWF0IjoxNzU5MjE4MDY3LCJuYmYiOjE3NTkyMTgwNjcsImV4cCI6MTc1OTQ3NzI2NywianRpIjoiOGM4ODA3MmYtZTJjMy00NDMwLWI5MjAtZDE5ZGI1NDdiNjY0In0.HERG6RZoG2AqG8r3SWuqh3TP2OzR-X36cj0SV_rjukwRYl4nTbLzcEdWEkgN3Es5Px-UuJPiHD3GmPwV2GvjzWLIEoSJtUbFql2NMWkSGIiZRfELxWdL0TJC1cKqGPVJq7l9CxrOtrqf1lucQZ6IrWqSlT6e9V33wutqENl9cO5DkmMUmgJ91bm0uAG42GVZdoH92arq8xY2oMzE_VDDsvWk9Kgj5y-PggNiLHM-dioTzLfFX1lT6LfONYwGIerGeMFIkSs6Vlz0Qu13lpHKJg8hHgkVElkKuVHaOSwwPmrAL_xBX5LnIuZWqPv0MrjBep8d-vJ_h0muV2r3h-5y7g"
 
@@ -131,32 +113,47 @@ def search_flats(request):
             print("Error fetching postal code:", e)
             lat, lon = None, None
 
+
         # Step 2: Get town from user's postal code
         boundingbox = get_bounding_box(lat, lon, 3.0) if lat and lon else None
         postal_towns = set()
+        original_town = get_hdb_town_from_postal(postal_code)
+        
+        fallback1 = int(postal_code[:2]) - 1
+        fallback2 = int(postal_code[:2]) + 1
 
-        #for lat_b, lon_b in boundingbox or []:
-           # sector = get_sector_from_latlon(lat_b, lon_b)
-            #town = get_hdb_town_from_postal(sector)
-           # if town:
-             #   postal_towns.add(town)
+        original_town_sector1 = get_hdb_town_from_postal(f"{fallback1:02d}0000") if 1 <= fallback1 <= 82 else None
+        original_town_sector2 = get_hdb_town_from_postal(f"{fallback2:02d}0000") if 1 <= fallback2 <= 82 else None
 
-        postal_town = get_hdb_town_from_postal(postal_code)
-        #postal_towns.add(postal_town)
+        postal_towns.add(original_town_sector1) if original_town_sector1 else None
+        postal_towns.add(original_town_sector2) if original_town_sector2 else None
+        postal_towns.add(original_town) if original_town else None
+
+        for lat_b, lon_b in boundingbox or []:
+            sector = get_sector_from_latlon(lat_b, lon_b)
+            if sector:
+                town = get_hdb_town_from_postal(sector)
+                if town:
+                    postal_towns.add(town)
 
         # Step 3: Fetch flats from the user's town
-        if lat and lon and postal_town:
-            dataset_id = "8c00bf08-9124-479e-aeca-7cc411d884c4"
+        if lat and lon and postal_towns:
+            dataset_id = "f1765b54-a209-4718-8d38-a39237f502b3" # HDB resale flats dataset : 2024 onward
             headers = {"Authorization": ONEMAP_TOKEN}
+            months = [f"2025-{str(m).zfill(2)}" for m in range(1, 10)]  # '2025-01' to '2025-09'
+            all_records = []
+
             try:
-                resale_url = (
-                    f"https://data.gov.sg/api/action/datastore_search?"
-                    f"resource_id={dataset_id}&limit=500"
-                    f"&filters={{\"town\":\"{postal_town}\"}}"
-                )
-                resale_data = requests.get(resale_url, timeout=15).json()
-                if resale_data.get("success"):
-                    records = resale_data["result"]["records"]
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    futures = [
+                    executor.submit(fetch_resale_flats_for_town, town, dataset_id, month)
+                    for town in postal_towns
+                    for month in months
+                ]
+                for future in concurrent.futures.as_completed(futures):
+                    records = future.result()
+                    all_records.extend(records)
+
                     for r in records:
                         block = r.get("block")
                         street = r.get("street_name")
@@ -189,7 +186,7 @@ def search_flats(request):
                             print("Error geocoding flat:", e)
                             continue
             except Exception as e:
-                print("Error fetching resale data for town:", postal_town, e)
+                print("Error fetching resale data for town:", postal_towns, e)
 
     context = {
         "flats": flats,
@@ -198,6 +195,7 @@ def search_flats(request):
     }
     return render(request, "accounts/search_results.html", context)
 
+# mapping of postal sectors to towns
 POSTAL_SECTOR_TO_TOWN = {
     "01": "CENTRAL AREA",
     "02": "CENTRAL AREA",
@@ -282,10 +280,12 @@ POSTAL_SECTOR_TO_TOWN = {
     "82": "PUNGGOL",
 }
 
+# get town from postal code
 def get_hdb_town_from_postal(postal_code):
     sector = postal_code[:2]
     return POSTAL_SECTOR_TO_TOWN.get(sector)
 
+# get sector from lat lon
 def get_sector_from_latlon(lat, lon):
     url = f"https://www.onemap.gov.sg/api/public/revgeocode?location={lat},{lon}&buffer=40&addressType=All&otherFeatures=N"
     resp = requests.get(url, timeout=10).json()
@@ -295,3 +295,47 @@ def get_sector_from_latlon(lat, lon):
         if postal_code and len(postal_code) == 6:
             return postal_code[:2]
     return None
+
+# resale flats for town
+def fetch_resale_flats_for_town(town, dataset_id, months=None):
+    # filters
+    filters = {"town": town}
+    if months:
+        filters["month"] = months
+
+    params = {
+        "resource_id": dataset_id,
+        "limit": 5,
+        "filters": json.dumps(filters)
+    }
+
+    url = "https://data.gov.sg/api/action/datastore_search"
+    print("URL:", requests.Request("GET", url, params=params).prepare().url)
+
+    resale_data = requests.get(url, params=params, timeout=15).json()
+    if resale_data.get("success"):
+        records = resale_data["result"]["records"]
+        print(f"Fetched {len(records)} records for town {town}, month {months}")
+        return records
+    return []
+
+# get bounding box for lat lon
+def get_bounding_box(lat, lon, radius_km):
+    # Approximate calculation for small distances
+    delta_lat = radius_km / 111  # 1 deg latitude ~ 111km
+    delta_lon = radius_km / (111 * cos(radians(lat)))
+    return [
+        (lat + delta_lat, lon + delta_lon),  # NE
+        (lat + delta_lat, lon - delta_lon),  # NW
+        (lat - delta_lat, lon + delta_lon),  # SE
+        (lat - delta_lat, lon - delta_lon),  # SW
+    ]
+# haversine formula to calculate distance between two lat/lon points
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371.0  # Earth radius in kilometers
+    dlat = radians(lat2 - lat1)
+    dlon = radians(lon2 - lon1)
+    a = sin(dlat / 2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    distance = R * c
+    return distance
