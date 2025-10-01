@@ -96,14 +96,25 @@ def haversine(lat1, lon1, lat2, lon2):
     distance = R * c
     return distance
 
+def get_bounding_box(lat, lon, radius_km):
+    # Approximate calculation for small distances
+    delta_lat = radius_km / 111  # 1 deg latitude ~ 111km
+    delta_lon = radius_km / (111 * cos(radians(lat)))
+    return [
+        (lat + delta_lat, lon + delta_lon),  # NE
+        (lat + delta_lat, lon - delta_lon),  # NW
+        (lat - delta_lat, lon + delta_lon),  # SE
+        (lat - delta_lat, lon - delta_lon),  # SW
+    ]
+
 ONEMAP_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5MjIwLCJmb3JldmVyIjpmYWxzZSwiaXNzIjoiT25lTWFwIiwiaWF0IjoxNzU5MjE4MDY3LCJuYmYiOjE3NTkyMTgwNjcsImV4cCI6MTc1OTQ3NzI2NywianRpIjoiOGM4ODA3MmYtZTJjMy00NDMwLWI5MjAtZDE5ZGI1NDdiNjY0In0.HERG6RZoG2AqG8r3SWuqh3TP2OzR-X36cj0SV_rjukwRYl4nTbLzcEdWEkgN3Es5Px-UuJPiHD3GmPwV2GvjzWLIEoSJtUbFql2NMWkSGIiZRfELxWdL0TJC1cKqGPVJq7l9CxrOtrqf1lucQZ6IrWqSlT6e9V33wutqENl9cO5DkmMUmgJ91bm0uAG42GVZdoH92arq8xY2oMzE_VDDsvWk9Kgj5y-PggNiLHM-dioTzLfFX1lT6LfONYwGIerGeMFIkSs6Vlz0Qu13lpHKJg8hHgkVElkKuVHaOSwwPmrAL_xBX5LnIuZWqPv0MrjBep8d-vJ_h0muV2r3h-5y7g"
 
 def search_flats(request):
-    postal_code = request.GET.get("q")  # use ?q= in URL
+    postal_code = request.GET.get("q")
     flats = []
 
     if postal_code:
-        # --- Step 1: Get postal code coordinates from OneMap ---
+        # Step 1: Get postal code coordinates from OneMap
         try:
             url = (
                 f"https://www.onemap.gov.sg/api/common/elastic/search"
@@ -111,7 +122,6 @@ def search_flats(request):
             )
             headers = {"Authorization": ONEMAP_TOKEN}
             resp = requests.get(url, headers=headers, timeout=10).json()
-
             if resp.get("found", 0) > 0:
                 lat = float(resp["results"][0]["LATITUDE"])
                 lon = float(resp["results"][0]["LONGITUDE"])
@@ -121,25 +131,38 @@ def search_flats(request):
             print("Error fetching postal code:", e)
             lat, lon = None, None
 
-        # --- Step 2: Fetch resale flat data ---
-        if lat and lon:
-            try:
-                dataset_id = "8c00bf08-9124-479e-aeca-7cc411d884c4"  # official resale dataset
-                resale_url = f"https://data.gov.sg/api/action/datastore_search?resource_id={dataset_id}&limit=500"
-                resale_data = requests.get(resale_url, timeout=15).json()
+        # Step 2: Get town from user's postal code
+        boundingbox = get_bounding_box(lat, lon, 3.0) if lat and lon else None
+        postal_towns = set()
 
+        #for lat_b, lon_b in boundingbox or []:
+           # sector = get_sector_from_latlon(lat_b, lon_b)
+            #town = get_hdb_town_from_postal(sector)
+           # if town:
+             #   postal_towns.add(town)
+
+        postal_town = get_hdb_town_from_postal(postal_code)
+        #postal_towns.add(postal_town)
+
+        # Step 3: Fetch flats from the user's town
+        if lat and lon and postal_town:
+            dataset_id = "8c00bf08-9124-479e-aeca-7cc411d884c4"
+            headers = {"Authorization": ONEMAP_TOKEN}
+            try:
+                resale_url = (
+                    f"https://data.gov.sg/api/action/datastore_search?"
+                    f"resource_id={dataset_id}&limit=500"
+                    f"&filters={{\"town\":\"{postal_town}\"}}"
+                )
+                resale_data = requests.get(resale_url, timeout=15).json()
                 if resale_data.get("success"):
                     records = resale_data["result"]["records"]
-
                     for r in records:
                         block = r.get("block")
                         street = r.get("street_name")
                         if not block or not street:
                             continue
-
                         full_address = f"{block} {street} Singapore"
-
-                        # --- Step 3: Get flat coordinates ---
                         geo_url = (
                             f"https://www.onemap.gov.sg/api/common/elastic/search"
                             f"?searchVal={full_address}&returnGeom=Y&getAddrDetails=N&pageNum=1"
@@ -150,8 +173,7 @@ def search_flats(request):
                                 flat_lat = float(geo["results"][0]["LATITUDE"])
                                 flat_lon = float(geo["results"][0]["LONGITUDE"])
                                 dist = haversine(lat, lon, flat_lat, flat_lon)
-
-                                if dist <= 3.0:  # within 3 km
+                                if dist <= 3.0:
                                     flats.append({
                                         "town": r.get("town"),
                                         "flat_type": r.get("flat_type"),
@@ -167,12 +189,109 @@ def search_flats(request):
                             print("Error geocoding flat:", e)
                             continue
             except Exception as e:
-                print("Error fetching resale data:", e)
+                print("Error fetching resale data for town:", postal_town, e)
 
-    # --- Step 4: Pass data to template ---
     context = {
         "flats": flats,
-        "center_lat": flats[0]["latitude"] if flats else 1.3521,
-        "center_lng": flats[0]["longitude"] if flats else 103.8198,
+        "center_lat": lat if lat else 1.3521,
+        "center_lng": lon if lon else 103.8198,
     }
     return render(request, "accounts/search_results.html", context)
+
+POSTAL_SECTOR_TO_TOWN = {
+    "01": "CENTRAL AREA",
+    "02": "CENTRAL AREA",
+    "03": "QUEENSTOWN",
+    "04": "BUKIT MERAH",
+    "05": "CLEMENTI",
+    "06": "CENTRAL AREA",
+    "07": "CENTRAL AREA",
+    "08": "CENTRAL AREA",
+    "09": "BUKIT MERAH",
+    "10": "BUKIT TIMAH",
+    "11": "BUKIT TIMAH",
+    "12": "TOA PAYOH",
+    "13": "TOA PAYOH",
+    "14": "QUEENSTOWN",
+    "15": "QUEENSTOWN",
+    "16": "QUEENSTOWN",
+    "17": "CENTRAL AREA",
+    "18": "TAMPINES",
+    "19": "GEYLANG",
+    "20": "ANG MO KIO",
+    "21": "BISHAN",
+    "22": "JURONG EAST",
+    "23": "BUKIT PANJANG",
+    "24": "BUKIT PANJANG",
+    "25": "WOODLANDS",
+    "26": "BISHAN",
+    "27": "YISHUN",
+    "28": "SERANGOON",
+    "29": "BISHAN",
+    "30": "BISHAN",
+    "31": "TOA PAYOH",
+    "32": "TOA PAYOH",
+    "33": "TOA PAYOH",
+    "34": "TOA PAYOH",
+    "35": "TOA PAYOH",
+    "36": "TOA PAYOH",
+    "37": "TOA PAYOH",
+    "38": "GEYLANG",
+    "39": "GEYLANG",
+    "40": "GEYLANG",
+    "41": "GEYLANG",
+    "42": "MARINE PARADE",
+    "43": "MARINE PARADE",
+    "44": "MARINE PARADE",
+    "45": "MARINE PARADE",
+    "46": "BEDOK",
+    "47": "BEDOK",
+    "48": "BEDOK",
+    "49": "PASIR RIS",
+    "50": "PASIR RIS",
+    "51": "TAMPINES",
+    "52": "TAMPINES",
+    "53": "SERANGOON",
+    "54": "HOUGANG",
+    "55": "SERANGOON",
+    "56": "ANG MO KIO",
+    "57": "ANG MO KIO",
+    "58": "BUKIT TIMAH",
+    "59": "BUKIT TIMAH",
+    "60": "JURONG WEST",
+    "61": "JURONG WEST",
+    "62": "JURONG WEST",
+    "63": "JURONG WEST",
+    "64": "JURONG WEST",
+    "65": "BUKIT PANJANG",
+    "66": "BUKIT PANJANG",
+    "67": "BUKIT PANJANG",
+    "68": "CHOA CHU KANG",
+    "69": "CHOA CHU KANG",
+    "70": "CHOA CHU KANG",
+    "71": "CHOA CHU KANG",
+    "72": "WOODLANDS",
+    "73": "WOODLANDS",
+    "75": "YISHUN",
+    "76": "SEMBAWANG",
+    "77": "YISHUN",
+    "78": "YISHUN",
+    "79": "SENGKANG",
+    "80": "SENGKANG",
+    "81": "PASIR RIS",
+    "82": "PUNGGOL",
+}
+
+def get_hdb_town_from_postal(postal_code):
+    sector = postal_code[:2]
+    return POSTAL_SECTOR_TO_TOWN.get(sector)
+
+def get_sector_from_latlon(lat, lon):
+    url = f"https://www.onemap.gov.sg/api/public/revgeocode?location={lat},{lon}&buffer=40&addressType=All&otherFeatures=N"
+    resp = requests.get(url, timeout=10).json()
+    results = resp.get("GeocodeInfo", [])
+    if results:
+        postal_code = results[0].get("POSTALCODE")
+        if postal_code and len(postal_code) == 6:
+            return postal_code[:2]
+    return None
