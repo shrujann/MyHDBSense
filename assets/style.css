@@ -1,0 +1,138 @@
+/* === Global styling for MyHDBSense === */
+body { background: #f9fafb; color: #111827; font-family: "Inter","Segoe UI",Roboto,Arial,sans-serif; }
+a { text-decoration: none; }
+
+.navbar-brand { font-weight: 700; color: #2563eb !important; }
+.nav-link { color: #374151 !important; border-radius: 8px; }
+.nav-link:hover, .nav-link.active { background: #e0e7ff !important; color: #1e40af !important; }
+
+.btn-primary { background: #2563eb; border: none; }
+.btn-primary:hover { background: #1e3a8a; }
+
+.hero { background: linear-gradient(135deg,#2563eb,#1e40af); color: #fff; padding: 80px 0; }
+.search-section { margin-top: -60px; background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+
+.card { border-radius: 12px; overflow: hidden; transition: transform .2s, box-shadow .2s; }
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,.1); }
+
+footer { background: #f3f4f6; color: #6b7280; border-top: 1px solid #e5e7eb; padding: 18px 0; }
+
+.stat-card h3 { margin: 0; }
+.stat-card .text-muted { font-size: .95rem; }
+
+.property-img { height: 200px; object-fit: cover; }
+
+/* Make hamburger icon visible on white navbar */
+.navbar-light .navbar-toggler-icon {
+  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(37,99,235,0.9)' stroke-width='2' stroke-linecap='round' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+.link-card { transition: transform .15s ease, box-shadow .15s ease; }
+
+.link-card:hover, .link-card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 0.75rem 1.25rem rgba(0, 0, 0, 0.08);
+}
+
+.link-card {
+  transition: all 0.2s ease;
+  border-radius: 1rem;
+}
+
+.link-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0.75rem 1.25rem rgba(0, 0, 0, 0.08);
+}
+
+.icon-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+}
+
+.bg-red-subtle { background-color: #ffe4e6; }
+.bg-success-subtle { background-color: #e6f4ea; }
+.bg-primary-subtle { background-color: #e7f0ff; }
+.bg-warning-subtle { background-color: #fff8e1; }
+.bg-purple-subtle { background-color: #f5e8ff; }
+.text-purple { color: #8b5cf6 !important; }
+
+.card-img-top {
+  width: 100%;
+  height: 220px;              
+  object-fit: cover;          
+  border-top-left-radius: 0.75rem;
+  border-top-right-radius: 0.75rem;
+}
+
+.recommended-box .card-img-top {
+  height: 240px;
+  object-fit: cover;
+}
+
+.news-card img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-top-left-radius: 0.75rem;
+  border-top-right-radius: 0.75rem;
+}
+
+.price-history .price-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 16px;
+  border-radius:12px;
+  background:#f8f9fa;            
+}
+
+.price-history .price-row.latest{
+  background:#eef6ff;           
+  border:1px solid #d7e9ff;
+}
+
+.price-history .left .date{
+  font-weight:600;
+  color:#343a40;
+}
+
+.price-history .left .badge-latest{
+  display:inline-block;
+  margin-left:.5rem;
+  padding:.15rem .45rem;
+  font-size:.7rem;
+  border-radius:.5rem;
+  background:#e7f1ff;
+  color:#0d6efd;
+  border:1px solid #cfe2ff;
+  vertical-align:middle;
+}
+
+.price-history .right{
+  text-align:right;
+}
+
+.price-history .right .amount{
+  font-weight:700;
+  color:#1f2937;
+}
+
+.price-history .right .change{
+  display:flex;
+  align-items:center;
+  gap:.35rem;
+  justify-content:flex-end;
+  font-size:.875rem;
+  margin-top:2px;
+}
+
+.price-history .right .change .bi{
+  font-size:.9rem;
+}
+
+.price-history .right .change.text-success{ color:#198754 !important; }
+.price-history .right .change.text-danger{  color:#dc3545 !important; }

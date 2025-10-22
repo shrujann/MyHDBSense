@@ -1,0 +1,61 @@
+<nav class="navbar navbar-expand-lg bg-white border-bottom py-3">
+  <div class="container d-flex flex-column flex-lg-row align-items-center justify-content-center">
+
+    <!-- Brand -->
+    <a class="navbar-brand fw-bold mb-2 mb-lg-0 me-lg-4" href="index.html" style="color:#2563eb;">
+      MyHDBSense
+    </a>
+
+    <!-- Navbar Toggler -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Centered Navigation -->
+    <div class="collapse navbar-collapse justify-content-center" id="mainNav">
+      <ul class="navbar-nav mx-auto text-center gap-lg-3">
+        <li class="nav-item"><a class="nav-link" href="properties.html">Properties</a></li>
+        <li class="nav-item"><a class="nav-link" href="amenities.html">Amenities</a></li>
+        <li class="nav-item"><a class="nav-link" href="roommates.html">Roommates</a></li>
+        <li class="nav-item"><a class="nav-link" href="calculator.html">Calculator</a></li>
+        <li class="nav-item"><a class="nav-link" href="news.html">News</a></li>
+        <li class="nav-item"><a class="nav-link" href="saved.html">Saved</a></li>
+      </ul>
+
+      <!-- Auth section (Sign In or Profile) -->
+      <div class="d-flex justify-content-center mt-3 mt-lg-0">
+
+        <!-- Sign In Button (Blue Rounded Pill) -->
+        <button id="btnOpenLogin"
+                class="btn btn-primary rounded-pill px-4 fw-semibold"
+                style="background:#2563eb;border:none;"
+                data-bs-toggle="modal" data-bs-target="#authModal">
+          Sign In
+        </button>
+
+        <!-- Logged-in Dropdown (hidden until login) -->
+        <div id="navUserDropdown" class="dropdown d-none ms-2">
+          <button class="btn btn-outline-primary rounded-pill dropdown-toggle" data-bs-toggle="dropdown">
+            <span id="navUserEmail">Profile</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li><a class="dropdown-item" href="profile.html">Profile</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><button class="dropdown-item" type="button" data-action="logout">Sign Out</button></li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</nav>
+
+<style>
+  .nav-link {
+    font-weight: 500;
+    color: #333;
+  }
+  .nav-link.active, .nav-link:hover {
+    color: #2563eb;
+  }
+</style>

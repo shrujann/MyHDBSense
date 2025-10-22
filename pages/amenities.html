@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>MyHDBSense | Amenities</title>
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+
+  <!-- Site styles (navbar/backhome includes rely on this) -->
+  <link rel="stylesheet" href="../assets/style.css"/>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root{
+      /* tweak this one number to resize BOTH map and nearby panels */
+      --pane-h: 560px;
+
+      --border: #e9edf2;
+      --card-r: 16px;
+      --chip-dark: #0b0d14;
+    }
+
+    /* Generic card */
+    .mhs-card{
+      background:#fff; border:1px solid var(--border); border-radius:var(--card-r);
+      box-shadow:0 6px 16px rgba(10,31,68,.06);
+    }
+
+    /* Location panel */
+    .location-panel .form-control{ border-radius:12px; padding:.75rem .95rem; }
+
+    /* ---------- CATEGORY STRIP (horizontal, equal size) ---------- */
+    .filter-strip{
+      display:flex; gap:14px; overflow-x:auto; padding:6px 2px 8px;
+      scroll-snap-type:x mandatory;
+    }
+    .filter-chip{
+      flex:0 0 258px; max-width:258px; min-height:118px;
+      background:#fff; border:1px solid var(--border); border-radius:14px;
+      box-shadow:0 6px 14px rgba(10,31,68,.06);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px; text-align:center; cursor:pointer; user-select:none; scroll-snap-align:start;
+      transition:transform .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease, border-color .12s ease;
+    }
+    .filter-chip .bi{ font-size:22px; opacity:.9; }
+    .filter-chip .name{ font-weight:700; font-size:.98rem; }
+    .filter-chip .count{ background:#eef2f6; color:#111; border-radius:999px; padding:3px 10px; font-weight:700; font-size:.86rem; }
+    .filter-chip:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(10,31,68,.10); }
+    .filter-chip.active{ background:var(--chip-dark); color:#fff; border-color:var(--chip-dark); }
+    .filter-chip.active .count{ background:#1f2430; color:#fff; }
+
+    /* ---------- MAP & NEARBY: guaranteed equal height ---------- */
+    .map-card, .nearby-card{
+      height:var(--pane-h);               /* SAME for both */
+      display:flex; flex-direction:column;
+      background:#fff; border:1px solid var(--border); border-radius:var(--card-r);
+      box-shadow:0 6px 16px rgba(10,31,68,.06);
+    }
+    .map-head, .nearby-head{
+      padding:10px 14px; display:flex; align-items:center; justify-content:space-between;
+      border-bottom:1px solid var(--border);
+    }
+    .map-head .title, .nearby-head .title{ font-weight:700; font-size:1rem; margin:0; }
+    #map{ flex:1; border-radius:0 0 var(--card-r) var(--card-r); }
+    .recenter-pill{
+      background:#fff; border:1px solid var(--border); border-radius:999px; padding:7px 12px; font-size:.92rem;
+      display:inline-flex; align-items:center; gap:8px; box-shadow:0 6px 16px rgba(10,31,68,.08);
+    }
+
+    /* Legend pinned inside map card */
+    .legend{
+      position:absolute; left:14px; bottom:14px; z-index:400;
+      background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px 12px;
+      box-shadow:0 6px 16px rgba(10,31,68,.08); font-size:.92rem;
+    }
+    .legend .dot{ width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:8px; }
+    .dot-green{ background:#16a34a; } .dot-blue{ background:#2563eb; }
+
+    /* ---------- Nearby list (clean, consistent sizing) ---------- */
+    .nearby-body{ flex:1; overflow:auto; padding:14px; }
+    .nearby-item{
+      background:#fff; border:1px solid var(--border); border-radius:14px; padding:16px 14px;
+      box-shadow:0 6px 14px rgba(10,31,68,.06); cursor:pointer;
+      transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .nearby-item:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(10,31,68,.10); border-color:#dfe6ee; }
+    .nearby-item .title{ font-weight:800; font-size:1.02rem; line-height:1.2; color:#0b0d14; }
+    .nearby-item .addr{ font-size:.95rem; color:#4b5563; }
+    .nearby-item .meta{ font-size:.92rem; color:#101828; display:flex; gap:16px; flex-wrap:wrap; }
+
+    /* Contribute */
+    .contrib-card{
+      border:1px solid var(--border); border-radius:16px; background:#fff;
+      padding:22px 18px; text-align:center; box-shadow:0 6px 16px rgba(10,31,68,.06);
+      transition:transform .12s ease, box-shadow .12s ease; cursor:pointer;
+    }
+    .contrib-card:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(10,31,68,.10); }
+    .contrib-card .bi{ font-size:32px; }
+
+    .stats-bar{ background:#eef3ff; border-radius:16px; padding:16px; }
+    .stat h3{ font-weight:800; font-size:1.6rem; margin-bottom:.15rem; }
+
+    /* Modals: match your auth modal vibe */
+    .mhs-modal .modal-content{ border:0; border-radius:20px; overflow:hidden; }
+    .mhs-modal .modal-head{ background:#15803d; color:#fff; }
+    .mhs-modal .form-control{ border-radius:12px; padding:.75rem .9rem; }
+    .mhs-modal .form-control::placeholder{ color:#9aa3af; }
+    .mhs-modal .btn-dark{ border-radius:999px; }
+
+    @media (max-width: 991.98px){
+      :root{ --pane-h: 440px; }
+      .filter-chip{ flex-basis:230px; max-width:230px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Shared navbar + back-to-home -->
+  <div data-include="../assets/components/navbar.html"></div>
+  <div data-include="../assets/components/backhome.html"></div>
+
+  <main class="container py-4">
+    <header class="mb-3">
+      <h2 class="fw-bold mb-1">Amenities Explorer</h2>
+      <p class="text-muted mb-0">Discover amenities around Singapore with distance-based filtering and crowdsourced contributions.</p>
+    </header>
+
+    <!-- Location / Radius -->
+    <section class="mhs-card p-3 p-md-4 mb-4 location-panel">
+      <div class="d-flex align-items-start gap-2 mb-2">
+        <i class="bi bi-geo-alt fs-5 text-secondary"></i>
+        <div>
+          <div class="fw-semibold">Enter Your Singapore Location</div>
+          <div class="text-muted small">Enter any Singapore address to discover nearby amenities and facilities.</div>
+        </div>
+      </div>
+
+      <form id="locForm" class="row g-2 align-items-center">
+        <div class="col-lg-9">
+          <label class="form-label small text-muted">Singapore Address *</label>
+          <input id="addressInput" class="form-control" placeholder='e.g., "Toa Payoh", "Marina Bay Sands", "Orchard Road"'/>
+        </div>
+        <div class="col-6 col-lg-1">
+          <label class="form-label small text-muted">Radius (km)</label>
+          <input id="radiusInput" type="number" min="0.1" step="0.1" value="1" class="form-control"/>
+        </div>
+        <div class="col-6 col-lg-2 d-grid">
+          <label class="form-label opacity-0">.</label>
+          <button class="btn btn-dark"><i class="bi bi-search me-2"></i>Search</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Filter by Category (horizontal scroll) -->
+    <section class="mhs-card p-3 p-md-4 mb-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <i class="bi bi-funnel"></i><span class="fw-semibold">Filter by Category</span>
+      </div>
+      <div id="catStrip" class="filter-strip"><!-- chips injected --></div>
+    </section>
+
+    <!-- Map + Nearby (equal height) -->
+    <section class="row g-3 mb-4">
+      <div class="col-lg-8">
+        <div class="map-card position-relative">
+          <div class="map-head">
+            <h6 class="title mb-0">Interactive Singapore Map</h6>
+            <button id="recenterBtn" class="recenter-pill"><i class="bi bi-arrow-counterclockwise"></i> Recenter</button>
+          </div>
+          <div id="map"></div>
+          <div class="legend">
+            <div><span class="dot dot-green"></span>Verified</div>
+            <div><span class="dot dot-blue"></span>User Added</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="nearby-card">
+          <div class="nearby-head">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-geo"></i>
+              <div>
+                <h6 class="title mb-0">Nearby Amenities <span id="nearCount" class="text-muted">(0)</span></h6>
+                <div class="text-muted small">Within <span id="nearRadius">1</span>km of your location</div>
+              </div>
+            </div>
+          </div>
+          <div class="nearby-body">
+            <div id="nearbyList" class="d-flex flex-column gap-3"><!-- items injected --></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contribute -->
+    <section class="mhs-card p-3 p-md-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <i class="bi bi-plus-lg"></i><span class="fw-semibold">Contribute to Our Community Database</span>
+      </div>
+      <div class="text-muted mb-3">Help fellow residents by adding missing amenities or updating existing information.</div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <button class="contrib-card h-100 w-100 text-start text-md-center"
+                  data-bs-toggle="modal" data-bs-target="#addAmenityModal">
+            <div class="text-success mb-2" style="font-size:38px; line-height:1">+</div>
+            <div class="fw-semibold">Add New Amenity</div>
+            <div class="text-muted small">Report missing location</div>
+          </button>
+        </div>
+        <div class="col-md-6">
+          <button class="contrib-card h-100 w-100 text-start text-md-center"
+                  data-bs-toggle="modal" data-bs-target="#updateAmenityModal">
+            <div class="text-primary mb-2"><i class="bi bi-pen"></i></div>
+            <div class="fw-semibold">Update Information</div>
+            <div class="text-muted small">Correct details or hours</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="stats-bar mt-4">
+        <div class="row text-center gy-3">
+          <div class="col-6 col-md-3 stat">
+            <h3 id="statTotal" class="text-primary">0</h3><div>Total Amenities</div>
+          </div>
+          <div class="col-6 col-md-3 stat">
+            <h3 id="statVerified" class="text-success">0</h3><div>Verified</div>
+          </div>
+          <div class="col-6 col-md-3 stat">
+            <h3 id="statUser" style="color:#7c3aed">0</h3><div>User Added</div>
+          </div>
+          <div class="col-6 col-md-3 stat">
+            <h3 id="statCats" class="text-warning">0</h3><div>Categories</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ADD AMENITY MODAL -->
+  <div class="modal fade mhs-modal" id="addAmenityModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:560px;">
+      <div class="modal-content">
+        <div class="modal-head p-3 px-4 d-flex align-items-center justify-content-between">
+          <div>
+            <h5 class="fw-bold mb-0">Add New Amenity</h5>
+            <div class="small opacity-75">Submit to admin for approval</div>
+          </div>
+          <button class="btn btn-sm btn-light opacity-75" data-bs-dismiss="modal" aria-label="Close">
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+        <form id="addAmenityForm" class="p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Amenity Name *</label>
+            <input class="form-control" name="name" placeholder="e.g., ABC Clinic, XYZ Mall" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Category *</label>
+            <select class="form-select" name="category" required></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Address *</label>
+            <input class="form-control" name="address" placeholder="Full Singapore address" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Description</label>
+            <textarea class="form-control" rows="3" name="description" placeholder="Brief description of the amenity"></textarea>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold small">Operating Hours</label>
+            <input class="form-control" name="operatingHours" placeholder="e.g., 9:00 AM - 6:00 PM">
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-dark flex-fill" type="submit">Submit for Approval</button>
+            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPDATE AMENITY MODAL (mock form; no persistence in this demo) -->
+  <div class="modal fade mhs-modal" id="updateAmenityModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:560px;">
+      <div class="modal-content">
+        <div class="modal-head p-3 px-4 d-flex align-items-center justify-content-between" style="background:#0f766e;">
+          <div>
+            <h5 class="fw-bold mb-0">Update Information</h5>
+            <div class="small opacity-75">Suggest corrections for an existing amenity</div>
+          </div>
+          <button class="btn btn-sm btn-light opacity-75" data-bs-dismiss="modal" aria-label="Close">
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+        <form id="updateAmenityForm" class="p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Amenity to Update *</label>
+            <select class="form-select" name="targetId" required></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">New Address</label>
+            <input class="form-control" name="newAddress" placeholder="Corrected address (optional)">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">New Operating Hours</label>
+            <input class="form-control" name="newHours" placeholder="e.g., 10:00 AM - 9:00 PM">
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold small">Notes</label>
+            <textarea class="form-control" rows="3" name="notes" placeholder="What needs to be corrected?"></textarea>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-dark flex-fill" type="submit">Submit Update</button>
+            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/main.js"></script>
+  <script>
+    /*********** CONFIG + FALLBACK ***********/
+    const DATA_URL = '../assets/data/amenities.json';
+
+    const CATEGORY_META = {
+      "All": { icon:"bi-geo-alt" },
+      "Food & Dining": { icon:"bi-cup-hot" },
+      "Healthcare": { icon:"bi-heart" },
+      "Education": { icon:"bi-mortarboard" },
+      "Shopping": { icon:"bi-bag" },
+      "Recreation": { icon:"bi-activity" },
+      "Transportation": { icon:"bi-car-front" },
+      "Banking & Finance": { icon:"bi-building" },
+      "Government Services": { icon:"bi-bank" },
+      "Fitness & Sports": { icon:"bi-dumbbell" },
+      "Entertainment": { icon:"bi-star" },
+      "Religious": { icon:"bi-building-gear" }
+    };
+    const CATEGORY_ORDER = Object.keys(CATEGORY_META).filter(k=>k!=="All"); // for selects
+
+    const FALLBACK = [
+      { id:"amenity1", name:"Toa Payoh MRT Station", category:"Transportation", address:"Toa Payoh MRT Station, Singapore", coordinates:{lat:1.3327,lng:103.8478}, distance:0.0, rating:4.1, operatingHours:"5:30 AM - 12:30 AM", description:"North-South Line MRT station", verified:true, userContributed:false },
+      { id:"amenity2", name:"Toa Payoh Hub", category:"Shopping", address:"190 Lor 6 Toa Payoh, Singapore 310190", coordinates:{lat:1.3326,lng:103.8477}, distance:0.0, rating:4.2, operatingHours:"10:00 AM - 10:00 PM", description:"Major shopping and dining hub in Toa Payoh", verified:true, userContributed:false },
+      { id:"amenity3", name:"SAFRA Toa Payoh", category:"Recreation", address:"293 Lor 6 Toa Payoh, Singapore 319387", coordinates:{lat:1.3312,lng:103.8458}, distance:0.3, rating:4.5, operatingHours:"6:00 AM - 11:00 PM", description:"Recreation club with swimming pool, gym, and sports facilities", verified:true, userContributed:false },
+      { id:"amenity4", name:"Toa Payoh Food Centre", category:"Food & Dining", address:"127 Lor 1 Toa Payoh, Singapore 310127", coordinates:{lat:1.3343,lng:103.8506}, distance:0.4, rating:4.3, operatingHours:"6:00 AM - 11:00 PM", description:"Popular hawker centre with variety of local food", verified:true, userContributed:false },
+      { id:"amenity5", name:"Toa Payoh Polyclinic", category:"Healthcare", address:"2002 Lor 8 Toa Payoh, Singapore 319260", coordinates:{lat:1.3356,lng:103.8509}, distance:0.5, rating:4.0, operatingHours:"8:00 AM - 5:30 PM", description:"Government polyclinic providing subsidized healthcare", verified:true, userContributed:false }
+    ];
+
+    /*********** STATE ***********/
+    let ALL = [];
+    let FILTERED = [];
+    let SELECTED_CAT = "All";
+    let CENTER = { lat: 1.3327, lng: 103.8478 };
+    let RADIUS_KM = 1;
+
+    let map, homeMarker;
+    const markers = new Map();
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadData();
+      initMap();
+      bindUI();
+      renderCategories();
+      applyFilter();
+      updateStats();
+      hydrateModals();
+    });
+
+    async function loadData(){
+      try{
+        const r = await fetch(DATA_URL, { cache:'no-store' });
+        if(!r.ok) throw 0;
+        const j = await r.json();
+        ALL = Array.isArray(j) ? j : (j.amenities || FALLBACK);
+      }catch{ ALL = FALLBACK; }
+    }
+
+    /*********** MAP ***********/
+    function initMap(){
+      map = L.map('map', { zoomControl:true }).setView([CENTER.lat, CENTER.lng], 15);
+      L.tileLayer('https://maps-{s}.onemap.sg/v3/Default/{z}/{x}/{y}.png', {
+        detectRetina:true, maxZoom:18, minZoom:11
+      }).addTo(map);
+
+      const homeHtml = `<div style="background:#0b0d14;width:28px;height:28px;border-radius:50%;
+                         display:flex;align-items:center;justify-content:center;color:#fff;border:2px solid #fff;">
+                         <i class="bi bi-house-fill"></i></div>`;
+      homeMarker = L.marker([CENTER.lat, CENTER.lng], { icon:L.divIcon({ html:homeHtml, iconSize:[28,28], className:'shadow-sm' }) })
+                    .addTo(map).bindPopup("Your selected location");
+
+      document.getElementById('recenterBtn').addEventListener('click', () => {
+        map.setView([CENTER.lat, CENTER.lng], 15); homeMarker.openPopup();
+      });
+    }
+
+    function clearMarkers(){ markers.forEach(m => map.removeLayer(m)); markers.clear(); }
+
+    function addMarker(a){
+      const color = a.verified ? '#16a34a' : '#2563eb';
+      const iconHtml = `<div style="background:${color};width:28px;height:28px;border-radius:50%;
+                         display:flex;align-items:center;justify-content:center;color:#fff;border:2px solid #fff;">
+                         <i class="bi bi-geo-alt-fill"></i></div>`;
+      const m = L.marker([a.coordinates.lat, a.coordinates.lng], { icon:L.divIcon({ html:iconHtml, iconSize:[28,28], className:'shadow-sm' }) }).addTo(map);
+      const distTxt = a._distKm != null ? `${a._distKm.toFixed(1)} km` : '';
+      m.bindPopup(`
+        <div class="small">
+          <div class="fw-semibold">${a.name}</div>
+          <div class="text-muted">${a.category}${distTxt ? ' • ' + distTxt : ''}</div>
+          ${a.rating ? `<div class="mt-1"><i class="bi bi-star-fill text-warning"></i> ${a.rating}</div>` : ''}
+          <div class="mt-1">${a.address || ''}</div>
+        </div>
+      `, { offset:[0,-8] });
+      markers.set(a.id, m);
+    }
+
+    function openPopup(id){
+      const m = markers.get(id);
+      if(!m) return;
+      map.setView(m.getLatLng(), 16, { animate:true });
+      m.openPopup();
+    }
+
+    /*********** UI ***********/
+    function bindUI(){
+      document.getElementById('locForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const addr = document.getElementById('addressInput').value.trim();
+        RADIUS_KM = parseFloat(document.getElementById('radiusInput').value) || 1;
+        document.getElementById('nearRadius').textContent = RADIUS_KM;
+
+        if(!addr){ applyFilter(); return; }
+
+        try{
+          const url = `https://developers.onemap.sg/commonapi/search?searchVal=${encodeURIComponent(addr)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`;
+          const res = await fetch(url); const json = await res.json();
+          if(json?.results?.length){
+            const top = json.results[0];
+            CENTER = { lat: parseFloat(top.LATITUDE), lng: parseFloat(top.LONGITUDE) };
+            map.setView([CENTER.lat, CENTER.lng], 15);
+            homeMarker.setLatLng([CENTER.lat, CENTER.lng]).bindPopup(top.ADDRESS || 'Selected location').openPopup();
+            applyFilter();
+          }else alert('Address not found. Try another Singapore address.');
+        }catch{ alert('Geocoding failed. Please try again.'); }
+      });
+
+      // Add Amenity modal submit
+      document.getElementById('addAmenityForm').addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const name = fd.get('name')?.toString().trim();
+        const category = fd.get('category');
+        const address = fd.get('address')?.toString().trim();
+        if(!name || !category || !address) return;
+
+        // In this mock, place it at the current map center; mark as user contributed (unverified)
+        const newAmenity = {
+          id: 'user_'+Date.now(),
+          name, category, address,
+          description: fd.get('description')?.toString().trim() || '',
+          operatingHours: fd.get('operatingHours')?.toString().trim() || '',
+          coordinates: { lat: CENTER.lat, lng: CENTER.lng },
+          rating: null,
+          verified: false,
+          userContributed: true
+        };
+        ALL.push(newAmenity);
+
+        // close modal
+        bootstrap.Modal.getInstance(document.getElementById('addAmenityModal'))?.hide();
+        e.target.reset();
+
+        // refresh UI
+        renderCategories();
+        applyFilter();
+        updateStats();
+      });
+
+      // Update Amenity modal (demo only: no real persistence)
+      document.getElementById('updateAmenityForm').addEventListener('submit', (e)=>{
+        e.preventDefault();
+        bootstrap.Modal.getInstance(document.getElementById('updateAmenityModal'))?.hide();
+        e.target.reset();
+        alert('Thanks! Your update has been submitted for review.');
+      });
+    }
+
+    function renderCategories(){
+      const strip = document.getElementById('catStrip');
+
+      const within = ALL.filter(a => haversine(CENTER, a.coordinates) <= RADIUS_KM);
+      const byCat = within.reduce((m,a)=>(m[a.category]=(m[a.category]||0)+1,m),{});
+      const total = within.length;
+
+      const order = ["All", ...Object.keys(CATEGORY_META).filter(k=>k!=="All")];
+
+      strip.innerHTML = order.map(cat => {
+        const meta = CATEGORY_META[cat];
+        const count = cat === 'All' ? total : (byCat[cat] || 0);
+        const active = cat === SELECTED_CAT ? 'active':'';
+        return `
+          <button type="button" class="filter-chip ${active}" data-cat="${cat}">
+            <i class="bi ${meta.icon}"></i>
+            <div class="name">${cat}</div>
+            <div class="count">${count}</div>
+          </button>
+        `;
+      }).join('');
+
+      strip.querySelectorAll('.filter-chip').forEach(el=>{
+        el.addEventListener('click',()=>{
+          SELECTED_CAT = el.getAttribute('data-cat');
+          renderCategories();
+          applyFilter();
+        });
+      });
+    }
+
+    /*********** FILTER + RENDER ***********/
+    function haversine(a,b){
+      const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180;
+      const sa=Math.sin(dLat/2)**2, sb=Math.sin(dLng/2)**2;
+      const c=2*Math.asin(Math.sqrt(sa+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*sb));
+      return R*c;
+    }
+
+    function applyFilter(){
+      FILTERED = ALL
+        .map(a => ({ ...a, _distKm: haversine(CENTER, a.coordinates) }))
+        .filter(a => a._distKm <= RADIUS_KM && (SELECTED_CAT === 'All' || a.category === SELECTED_CAT))
+        .sort((a,b)=>a._distKm - b._distKm);
+
+      document.getElementById('nearCount').textContent = `(${FILTERED.length})`;
+      document.getElementById('nearRadius').textContent = RADIUS_KM;
+
+      clearMarkers();
+      FILTERED.forEach(addMarker);
+      renderNearby();
+      renderCategories(); // update counts
+    }
+
+    function renderNearby(){
+      const list = document.getElementById('nearbyList');
+      list.innerHTML = FILTERED.map(a=>{
+        const ico = (CATEGORY_META[a.category] || CATEGORY_META['All']).icon;
+        return `
+          <div class="nearby-item" data-id="${a.id}">
+            <div class="d-flex">
+              <div class="me-3 mt-1 fs-5"><i class="bi ${ico}"></i></div>
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="title">${a.name}</div>
+                </div>
+                <div class="addr">${a.address || ''}</div>
+                <div class="meta mt-1">
+                  <span><i class="bi bi-geo-alt me-1"></i>${a._distKm.toFixed(1)} km</span>
+                  ${a.rating ? `<span><i class="bi bi-star-fill text-warning me-1"></i>${a.rating}</span>` : ''}
+                  <span class="badge bg-light text-dark">${a.category}</span>
+                </div>
+                ${a.operatingHours ? `<div class="small text-muted mt-1">Hours: ${a.operatingHours}</div>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      list.querySelectorAll('.nearby-item').forEach(el=>{
+        el.addEventListener('click',()=>openPopup(el.getAttribute('data-id')));
+      });
+    }
+
+    function updateStats(){
+      const total = ALL.length;
+      const verified = ALL.filter(a=>a.verified).length;
+      const user = ALL.filter(a=>a.userContributed && !a.verified).length;
+      const cats = new Set(ALL.map(a=>a.category)).size;
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statVerified').textContent = verified;
+      document.getElementById('statUser').textContent = user;
+      document.getElementById('statCats').textContent = cats;
+    }
+
+    function hydrateModals(){
+      // Fill category select in Add modal
+      const catSel = document.querySelector('#addAmenityForm select[name="category"]');
+      catSel.innerHTML = CATEGORY_ORDER.map(c=>`<option>${c}</option>`).join('');
+
+      // Fill amenity select in Update modal
+      const targetSel = document.querySelector('#updateAmenityForm select[name="targetId"]');
+      const opts = ALL.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+      targetSel.innerHTML = opts || '<option disabled>No amenities yet</option>';
+    }
+  </script>
+</body>
+</html>

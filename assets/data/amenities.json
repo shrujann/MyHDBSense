@@ -1,0 +1,79 @@
+{
+  "center": { "lat": 1.3327, "lng": 103.8478, "address": "Toa Payoh" },
+  "categories": [
+    "All",
+    "Food & Dining",
+    "Healthcare",
+    "Education",
+    "Shopping",
+    "Recreation",
+    "Transportation",
+    "Banking & Finance",
+    "Government Services",
+    "Fitness & Sports",
+    "Entertainment",
+    "Religious"
+  ],
+  "items": [
+    {
+      "id": "amenity1",
+      "name": "Toa Payoh Hub",
+      "category": "Shopping",
+      "address": "190 Lor 6 Toa Payoh, Singapore 310190",
+      "coordinates": { "lat": 1.3326, "lng": 103.8477 },
+      "distance": 0.2,
+      "rating": 4.2,
+      "hours": "10:00 AM - 10:00 PM",
+      "description": "Major shopping and dining hub in Toa Payoh",
+      "verified": true
+    },
+    {
+      "id": "amenity2",
+      "name": "Toa Payoh Polyclinic",
+      "category": "Healthcare",
+      "address": "2002 Lor 8 Toa Payoh, Singapore 319260",
+      "coordinates": { "lat": 1.3356, "lng": 103.8509 },
+      "distance": 0.4,
+      "rating": 4.0,
+      "hours": "8:00 AM - 5:30 PM",
+      "description": "Government polyclinic providing subsidized healthcare",
+      "verified": true
+    },
+    {
+      "id": "amenity3",
+      "name": "SAFRA Toa Payoh",
+      "category": "Recreation",
+      "address": "293 Lor 6 Toa Payoh, Singapore 319387",
+      "coordinates": { "lat": 1.3312, "lng": 103.8458 },
+      "distance": 0.3,
+      "rating": 4.5,
+      "hours": "6:00 AM - 11:00 PM",
+      "description": "Recreation club with pool, gym, and sports facilities",
+      "verified": true
+    },
+    {
+      "id": "amenity4",
+      "name": "Toa Payoh Food Centre",
+      "category": "Food & Dining",
+      "address": "127 Lor 1 Toa Payoh, Singapore 310127",
+      "coordinates": { "lat": 1.3343, "lng": 103.8506 },
+      "distance": 0.1,
+      "rating": 4.3,
+      "hours": "6:00 AM - 11:00 PM",
+      "description": "Popular hawker centre with variety of local food",
+      "verified": true
+    },
+    {
+      "id": "amenity5",
+      "name": "Toa Payoh MRT Station",
+      "category": "Transportation",
+      "address": "Toa Payoh MRT Station, Singapore",
+      "coordinates": { "lat": 1.3329, "lng": 103.8479 },
+      "distance": 0.1,
+      "rating": 4.1,
+      "hours": "5:30 AM - 12:30 AM",
+      "description": "North-South Line MRT station",
+      "verified": true
+    }
+  ]
+}

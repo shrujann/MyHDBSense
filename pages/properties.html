@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MyHDBSense | Properties</title>
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Site styles -->
+  <link rel="stylesheet" href="../assets/style.css">
+
+  <style>
+    .mhs-section { margin-top: 2.5rem; margin-bottom: 2.5rem; }
+    .recommended-box { background:#f7fbff; border-radius: .9rem; }
+    .mhs-img { height: 220px; width: 100%; object-fit: cover; }
+    .mhs-img-lg { height: 360px; width: 100%; object-fit: cover; }
+    .chip { font-size:.75rem; padding:.2rem .5rem; border-radius:1rem; background:#f1f3f5; }
+    .filter-holder, .recommended-holder, .list-holder { margin-top: 2.5rem; }
+    .pm-panel { background:#effaf1; border-radius: .8rem; }
+    .pm-score .progress { height: 6px; }
+    .pm-score .progress-bar { background-color: #0d6efd; }
+
+    /* Screenshot-style rows (like your reference) */
+    .price-row{display:flex;justify-content:space-between;align-items:center;border:1px solid #eef1f4;border-radius:12px;padding:10px 14px}
+    .price-row.latest{background:#f8fafc}
+    .price-row .left .date{font-weight:600}
+    .price-row .right .amount{font-weight:700}
+  </style>
+</head>
+<body>
+
+  <!-- Global navbar + synced Back Home include -->
+  <div data-include="../assets/components/navbar.html"></div>
+  <div data-include="../assets/components/backhome.html"></div>
+
+  <main class="container py-4">
+
+    <!-- Heading -->
+    <header class="d-flex justify-content-between align-items-center">
+      <div>
+        <h2 class="mb-1">Search Results</h2>
+        <p class="text-muted mb-0">Found <span id="propertyCount">0</span> HDB properties matching your criteria</p>
+      </div>
+      <a class="btn btn-outline-secondary rounded-pill d-none d-md-inline-flex" href="properties.html">
+        New Search
+      </a>
+    </header>
+
+    <!-- Search Filters -->
+    <section class="filter-holder">
+      <!-- NOTE: this component should dispatch a custom event 'mhs:filters' with the selected filters -->
+      <div data-include="../assets/components/searchfilters.html" data-component="filters"></div>
+    </section>
+
+    <!-- Recommended -->
+    <section class="recommended-holder">
+      <div class="card border-0 shadow-sm recommended-box">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold mb-1">
+                <i class="bi bi-lightning-charge me-2 text-primary"></i> Recommended for You
+              </h5>
+              <p class="text-muted small mb-0">Properties that match your preferences and budget.</p>
+            </div>
+            <a href="#" class="btn btn-outline-dark rounded-pill">View All Recommendations</a>
+          </div>
+
+          <div id="featuredProperties" class="row g-4"></div>
+
+          <div class="alert alert-light mt-4 border text-muted small mb-0">
+            <i class="bi bi-lightbulb me-2 text-warning"></i>
+            <b>Sign in</b> for personalized recommendations based on your budget and housing needs.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- All Listings -->
+    <section class="list-holder">
+      <h4 class="fw-bold mb-3">All Listings</h4>
+      <div id="allProperties" class="row g-4"></div>
+    </section>
+
+  </main>
+
+  <!-- Property Details Modal -->
+  <div class="modal fade" id="propertyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down">
+      <div class="modal-content border-0">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold" id="pmTitle">HDB Listing</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body pt-0">
+
+          <!-- Carousel -->
+          <div id="pmCarousel" class="carousel slide mb-3">
+            <div class="carousel-inner rounded-3 overflow-hidden">
+              <div class="carousel-item active"><img id="pmImg1" class="d-block w-100 mhs-img-lg" alt=""></div>
+              <div class="carousel-item"><img id="pmImg2" class="d-block w-100 mhs-img-lg" alt=""></div>
+              <div class="carousel-item"><img id="pmImg3" class="d-block w-100 mhs-img-lg" alt=""></div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#pmCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#pmCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          </div>
+
+          <!-- Price panel -->
+          <div class="pm-panel p-3 mb-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-house-fill fs-4 text-success"></i>
+              <span class="fw-semibold">Information</span>
+              <span class="badge text-bg-light ms-2" id="pmType">HDB</span>
+              <span class="badge text-bg-light ms-2" id="pmFlatType">—</span>
+              <span class="badge text-bg-success ms-2 d-none" id="pmVerified"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
+            </div>
+            <h3 class="fw-bold mb-2" id="pmPrice">$—</h3>
+            <div class="row g-3 small text-muted">
+              <div class="col-6 col-md-3"><div>Price per sqft</div><div class="fw-semibold" id="pmPsf">—</div></div>
+              <div class="col-6 col-md-3"><div>Market trend</div><div class="fw-semibold" id="pmTrend">—</div></div>
+              <div class="col-6 col-md-3"><div>Lease remaining</div><div class="fw-semibold" id="pmLease">—</div></div>
+              <div class="col-6 col-md-3"><div>Town / Flat Model</div><div class="fw-semibold" id="pmTownModel">—</div></div>
+            </div>
+          </div>
+
+          <!-- Address & facts -->
+          <div class="row g-3 mb-3">
+            <div class="col-12"><i class="bi bi-geo-alt me-1"></i><span id="pmAddress" class="fw-semibold">—</span></div>
+            <div class="col-6 col-md-3"><div class="small text-muted">Bedrooms</div><div class="fw-semibold" id="pmBeds">—</div></div>
+            <div class="col-6 col-md-3"><div class="small text-muted">Bathrooms</div><div class="fw-semibold" id="pmBaths">—</div></div>
+            <div class="col-6 col-md-3"><div class="small text-muted">Sqft</div><div class="fw-semibold" id="pmSqft">—</div></div>
+            <div class="col-6 col-md-3"><div class="small text-muted">Nearest MRT</div><div class="fw-semibold" id="pmMrt">—</div></div>
+          </div>
+
+          <!-- Description -->
+          <div class="mb-3">
+            <h6 class="fw-bold">Description</h6>
+            <p id="pmDesc" class="mb-0 small text-muted">—</p>
+          </div>
+
+          <!-- Amenity Score -->
+          <div class="pm-score rounded-3 p-3 border mb-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-star-fill text-warning"></i>
+              <span class="fw-semibold">Neighborhood Amenity Score</span>
+              <span class="badge bg-light text-dark ms-auto" id="pmScore">—</span>
+            </div>
+            <div class="small mb-1">Food & Dining <span class="float-end" id="pmScoreFD">8.5</span></div>
+            <div class="progress mb-2"><div class="progress-bar" id="pmBarFD"></div></div>
+            <div class="small mb-1">Transport <span class="float-end" id="pmScoreT">9.0</span></div>
+            <div class="progress mb-2"><div class="progress-bar" id="pmBarT"></div></div>
+            <div class="small mb-1">Recreation <span class="float-end" id="pmScoreR">8.0</span></div>
+            <div class="progress mb-2"><div class="progress-bar" id="pmBarR"></div></div>
+            <div class="small mb-1">Education <span class="float-end" id="pmScoreE">9.5</span></div>
+            <div class="progress"><div class="progress-bar" id="pmBarE"></div></div>
+            <div class="small text-muted mt-2">Score based on proximity and quality of amenities within 1km radius (demo).</div>
+          </div>
+
+          <!-- Price History -->
+          <div class="price-history p-3 rounded-3 border mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="fw-bold mb-0">Price History</h6>
+              <span class="badge bg-dark-subtle text-dark" id="pmTrendBadge">—</span>
+            </div>
+
+            <div class="bg-light-subtle p-3 rounded-3 text-center mb-4">
+              <div class="small text-success mb-1" id="pmChangeLabel">—</div>
+              <div class="fw-semibold text-muted small mb-1">Current Resale Price</div>
+              <h4 class="fw-bold text-primary mb-0" id="pmCurrentPrice">—</h4>
+            </div>
+
+            <div class="fw-semibold mb-2">Recent Price Changes</div>
+            <div id="pmHistoryList" class="d-flex flex-column gap-2"></div>
+          </div>
+
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button class="btn btn-dark">Schedule Viewing</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/main.js"></script>
+
+  <script>
+    let PROPERTIES = [];
+
+    /* ------------------ DATA LOADER ------------------ */
+    async function loadProperties() {
+      // Swap this to your API endpoint later
+      const url = "../assets/data/properties.json";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to load properties.json");
+      PROPERTIES = await res.json();
+      render();
+    }
+
+    /* --------------------- RENDER --------------------- */
+    function render() {
+      const feat = document.getElementById("featuredProperties");
+      const list = document.getElementById("allProperties");
+
+      feat.innerHTML = PROPERTIES.slice(0,3).map((p,i)=>cardHTML(p,i)).join("");
+      list.innerHTML = PROPERTIES.map((p,i)=>cardHTML(p,i)).join("");
+      document.getElementById("propertyCount").textContent = PROPERTIES.length;
+      window.MHS_PROPERTIES = PROPERTIES;
+    }
+
+    function cardHTML(p, idx) {
+      const priceLabel = p.purpose === "rental" ? `$${p.price.toLocaleString("en-SG")}/month` : `$${p.price.toLocaleString("en-SG")}`;
+      const typeChip  = p.hdbFlatType ? `<span class="chip me-1">${p.hdbFlatType}</span>` : "";
+      const verified  = p.verified ? `<span class="chip me-1 text-success"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>` : "";
+      const purpose   = p.purpose ? `<span class="chip me-1">${p.purpose === 'rental' ? 'For Rent' : 'For Sale'}</span>` : "";
+      const img       = (p.images && p.images[0]) || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=60";
+
+      return `
+        <div class="col-md-4">
+          <div class="card shadow-sm border-0 h-100">
+            <img src="${img}" alt="${p.title}" class="card-img-top mhs-img">
+            <div class="card-body">
+              <div class="mb-2">${typeChip}${verified}${purpose}</div>
+              <h5 class="text-success fw-bold mb-1">${priceLabel}</h5>
+              <h6 class="mb-1">${p.title}</h6>
+              <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>${p.address}</p>
+              <p class="text-muted small mb-2"><i class="bi bi-arrows-fullscreen me-1"></i>${(p.sqft||'—')} sqft • <i class="bi bi-door-open me-1 ms-2"></i>${p.bedrooms||'—'} bed • <i class="bi bi-droplet me-1 ms-2"></i>${p.bathrooms||'—'} bath</p>
+              <button class="btn btn-outline-dark w-100 rounded-pill" data-action="view-details" data-index="${idx}">
+                <i class="bi bi-eye me-1"></i> View Details
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /* ---------------- MODAL POPULATE ------------------ */
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action='view-details']");
+      if (!btn) return;
+      const i = Number(btn.getAttribute("data-index"));
+      const item = (window.MHS_PROPERTIES || [])[i];
+      if (!item) return;
+      populatePropertyModal(item);
+      const modal = new bootstrap.Modal(document.getElementById("propertyModal"));
+      modal.show();
+    });
+
+    function populatePropertyModal(p) {
+      document.getElementById("pmTitle").textContent = `${p.title}${p.region ? " in " + p.region : ""}`;
+      document.getElementById("pmType").textContent = p.propertyType || "HDB";
+      document.getElementById("pmFlatType").textContent = p.hdbFlatType || "—";
+      document.getElementById("pmVerified").classList.toggle("d-none", !p.verified);
+
+      // Images
+      const imgs = (p.images && p.images.length ? p.images : [
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=60"
+      ]).slice(0,3);
+      document.getElementById("pmImg1").src = imgs[0] || imgs[imgs.length-1];
+      document.getElementById("pmImg2").src = imgs[1] || imgs[0];
+      document.getElementById("pmImg3").src = imgs[2] || imgs[0];
+
+      // Price Block
+      const priceLabel = p.purpose === "rental" ? `$${(p.price||0).toLocaleString("en-SG")}/month`
+                                                : `$${(p.price||0).toLocaleString("en-SG")}`;
+      document.getElementById("pmPrice").textContent = priceLabel;
+      document.getElementById("pmPsf").textContent   = p.psf ? `$${p.psf.toLocaleString("en-SG")}` : "—";
+      document.getElementById("pmTrend").textContent = lastChange(p) ?? "—";
+      document.getElementById("pmLease").textContent = p.remainingLease ? `${p.remainingLease} years` : "—";
+      document.getElementById("pmTownModel").textContent = `${p.region||"—"}${p.hdbFlatType ? " / "+p.hdbFlatType : ""}`;
+
+      // Facts
+      document.getElementById("pmAddress").textContent = p.address || "—";
+      document.getElementById("pmBeds").textContent    = p.bedrooms ?? "—";
+      document.getElementById("pmBaths").textContent   = p.bathrooms ?? "—";
+      document.getElementById("pmSqft").textContent    = p.sqft ? p.sqft.toLocaleString("en-SG") : "—";
+      const mrt = p.nearbyMRT ? `${p.nearbyMRT}${p.distanceToMRT ? " • " + p.distanceToMRT + "km" : ""}` : "—";
+      document.getElementById("pmMrt").textContent     = mrt;
+
+      // Description
+      document.getElementById("pmDesc").textContent    = p.description || "—";
+
+      // Scores (demo)
+      const ns = p.neighbourhoodScore || 8.7;
+      document.getElementById("pmScore").textContent = `${ns.toFixed(1)}/10`;
+      const split = (val) => Math.max(0, Math.min(100, val*10)) + "%";
+      setBar("pmBarFD", split(8.5)); document.getElementById("pmScoreFD").textContent = "8.5";
+      setBar("pmBarT",  split(9.0)); document.getElementById("pmScoreT").textContent  = "9.0";
+      setBar("pmBarR",  split(8.0)); document.getElementById("pmScoreR").textContent  = "8.0";
+      setBar("pmBarE",  split(9.5)); document.getElementById("pmScoreE").textContent  = "9.5";
+
+      // --- Price History rows (auto-calc missing %) ---
+      const trend = lastChange(p);
+      document.getElementById("pmTrendBadge").textContent = trend || "—";
+      const lastPrice = (p.price || 0).toLocaleString("en-SG");
+      document.getElementById("pmCurrentPrice").textContent = p.purpose === "rental"
+        ? `$${lastPrice}/month` : `$${lastPrice}`;
+      document.getElementById("pmChangeLabel").textContent =
+        trend?.includes("%") ? trend.split("vs")[0].trim() : "—";
+
+      const wrap = document.getElementById("pmHistoryList");
+      const asc = Array.isArray(p.priceHistory) ? [...p.priceHistory].sort((a,b)=>new Date(a.date)-new Date(b.date)) : [];
+      for (let i=0;i<asc.length;i++){
+        if (asc[i].change==null && i>0 && asc[i-1].price){
+          const prev = asc[i-1].price, curr = asc[i].price;
+          asc[i].change = ((curr - prev) / prev) * 100;
+        }
+      }
+      const rows = asc.slice(-4).reverse();
+      wrap.innerHTML = rows.map((row, idx) => {
+        const isLatest = idx === 0;
+        const amt = `$${(row.price||0).toLocaleString('en-SG')}`;
+        const up = typeof row.change === 'number' ? row.change >= 0 : true;
+        const changeHTML = typeof row.change === 'number'
+          ? `<span class="${up?'text-success':'text-danger'}">${up?'↑':'↓'} ${Math.abs(row.change).toFixed(2)}%</span>` : '';
+        const d = new Date(row.date).toLocaleString('en-US',{month:'short',year:'numeric'});
+        return `<div class="price-row ${isLatest?'latest':''}">
+            <div class="left"><span class="date">${d}</span> ${isLatest?'<span class="badge bg-primary-subtle text-primary ms-1">Latest</span>':''}</div>
+            <div class="right d-flex align-items-center gap-3">
+              <div class="amount">${amt}</div>${changeHTML}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function lastChange(p) {
+      if (!Array.isArray(p.priceHistory) || !p.priceHistory.length) return null;
+      const last = [...p.priceHistory].reverse().find(x => typeof x.change === "number");
+      if (!last) return null;
+      const sign = last.change >= 0 ? "+" : "";
+      return `${sign}${last.change.toFixed(2)}% vs last month`;
+    }
+    function setBar(id, w) { const el = document.getElementById(id); if (el) el.style.width = w; }
+
+    /* ----------------- FILTERS BRIDGE ----------------- */
+    window.applyPropertyFilters = function (f = {}) {
+      const list = document.getElementById("allProperties");
+      const feat = document.getElementById("featuredProperties");
+      let data = [...PROPERTIES];
+
+      if (f.town) data = data.filter(p => (p.region||'').toLowerCase().includes(f.town));
+      if (f.purpose) data = data.filter(p => (p.purpose||'').toLowerCase() === f.purpose);
+      if (f.bedrooms) data = data.filter(p => (p.bedrooms||0) >= f.bedrooms);
+      if (f.verifiedOnly) data = data.filter(p => !!p.verified);
+      if (Number.isFinite(f.minPrice)) data = data.filter(p => (p.price||0) >= f.minPrice);
+      if (Number.isFinite(f.maxPrice)) data = data.filter(p => (p.price||0) <= f.maxPrice);
+      if (Number.isFinite(f.mrtKm))  data = data.filter(p => (p.distanceToMRT||999) <= f.mrtKm);
+
+      feat.innerHTML = data.slice(0,3).map((p,i)=>cardHTML(p,i)).join("");
+      list.innerHTML = data.map((p,i)=>cardHTML(p,i)).join("");
+      document.getElementById("propertyCount").textContent = data.length;
+    };
+    window.addEventListener('mhs:filters', e => window.applyPropertyFilters(e.detail || {}));
+
+    document.addEventListener("DOMContentLoaded", loadProperties);
+  </script>
+</body>
+</html>

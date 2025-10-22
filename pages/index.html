@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MyHDBSense | Your Complete HDB Assistant</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="../assets/style.css">
+
+  <style>
+    .hero {
+      background: #1e4ed8;
+      color: white;
+    }
+    #featuredProperties .card-img-top {
+      height: 220px;
+      object-fit: cover;
+      border-top-left-radius: 0.5rem;
+      border-top-right-radius: 0.5rem;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Navbar -->
+  <div data-include="../assets/components/navbar.html"></div>
+
+  <!-- Hero -->
+  <section class="hero text-center">
+    <div class="container py-5">
+      <h1 class="fw-bold display-5 mb-3">MyHDBSense: Your Complete HDB Assistant</h1>
+      <p class="lead mb-5">
+        Property search, resale & rental price comparisons, amenities discovery, roommate finder, and housing insights — all in one place.
+      </p>
+
+      <!-- Filters component -->
+      <div data-include="../assets/components/searchfilters.html" data-component="filters" id="propFilters"></div>
+    </div>
+  </section>
+
+  <!-- Stats Section -->
+  <section class="py-5 bg-light">
+    <div class="container text-center">
+      <div class="row g-4">
+        
+        <!-- HDB Properties -->
+        <div class="col-md-3">
+          <a href="properties.html" class="text-decoration-none text-reset d-block">
+            <div class="card p-4 border-0 shadow-sm h-100">
+              <div class="icon-circle bg-primary-subtle text-primary mx-auto mb-3">
+                <i class="bi bi-building fs-2"></i>
+              </div>
+              <h3 class="fw-bold text-dark mb-0">16</h3>
+              <p class="text-muted mb-0">HDB Properties</p>
+            </div>
+          </a>
+        </div>
+
+        <!-- Amenities Mapped -->
+        <div class="col-md-3">
+          <a href="amenities.html" class="text-decoration-none text-reset d-block">
+            <div class="card p-4 border-0 shadow-sm h-100">
+              <div class="icon-circle bg-success-subtle text-success mx-auto mb-3">
+                <i class="bi bi-geo-alt-fill fs-2"></i>
+              </div>
+              <h3 class="fw-bold text-dark mb-0">2.5K+</h3>
+              <p class="text-muted mb-0">Amenities Mapped</p>
+            </div>
+          </a>
+        </div>
+
+        <!-- Roommate Matches -->
+        <div class="col-md-3">
+          <a href="roommates.html" class="text-decoration-none text-reset d-block">
+            <div class="card p-4 border-0 shadow-sm h-100">
+              <div class="icon-circle bg-purple-subtle text-purple mx-auto mb-3">
+                <i class="bi bi-people-fill fs-2"></i>
+              </div>
+              <h3 class="fw-bold text-dark mb-0">850+</h3>
+              <p class="text-muted mb-0">Roommate Matches</p>
+            </div>
+          </a>
+        </div>
+
+        <!-- Housing News -->
+        <div class="col-md-3">
+          <a href="news.html" class="text-decoration-none text-reset d-block">
+            <div class="card p-4 border-0 shadow-sm h-100">
+              <div class="icon-circle bg-warning-subtle text-warning mx-auto mb-3">
+                <i class="bi bi-graph-up fs-2"></i>
+              </div>
+              <h3 class="fw-bold text-dark mb-0">Latest</h3>
+              <p class="text-muted mb-0">Housing News</p>
+            </div>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+  
+  <!-- Complete HDB Solution -->
+  <section class="py-5 text-center bg-white">
+    <div class="container">
+      <h2 class="fw-bold mb-3">Complete HDB Solution</h2>
+      <p class="text-muted mb-5">
+        From comprehensive property search with detailed HDB filters to roommate matching, amenity discovery to market insights — everything you need for your HDB journey.
+      </p>
+
+      <div class="row g-4 justify-content-center">
+
+        <!-- TDSR Calculator -->
+        <div class="col-md-3">
+          <a href="calculator.html" class="text-decoration-none text-reset d-block">
+            <div class="card p-4 border-0 shadow-sm h-100 link-card" role="button" tabindex="0">
+              <div class="icon-circle bg-primary-subtle text-primary mb-3">
+                <i class="bi bi-calculator-fill fs-2"></i>
+              </div>
+              <h5 class="fw-semibold mb-2">Affordability Calculator</h5>
+              <p class="text-muted small mb-0">
+                Calculate affordability with TDSR, CPF OA integration, and comprehensive down payment planning.
+              </p>
+            </div>
+          </a>
+        </div>
+
+        <!-- Amenity Explorer -->
+        <div class="col-md-3">
+          <a href="amenities.html" class="text-decoration-none text-reset d-block">
+            <div class="card p-4 border-0 shadow-sm h-100 link-card" role="button" tabindex="0">
+              <div class="icon-circle bg-success-subtle text-success mb-3">
+                <i class="bi bi-geo-alt-fill fs-2"></i>
+              </div>
+              <h5 class="fw-semibold mb-2">Amenity Explorer</h5>
+              <p class="text-muted small mb-0">
+                Discover Singapore amenities with 11 categories, distance filtering and crowdsourced contributions.
+              </p>
+            </div>
+          </a>
+        </div>
+
+        <!-- Smart Roommate Finder -->
+        <div class="col-md-3">
+          <a href="roommates.html" class="text-decoration-none text-reset d-block">
+            <div class="card p-4 border-0 shadow-sm h-100 link-card" role="button" tabindex="0">
+              <div class="icon-circle bg-purple-subtle text-purple mb-3">
+                <i class="bi bi-people-fill fs-2"></i>
+              </div>
+              <h5 class="fw-semibold mb-2">Smart Roommate Finder</h5>
+              <p class="text-muted small mb-0">
+                Connect with compatible roommates using age group preferences, multiple area selection, and lifestyle matching.
+              </p>
+            </div>
+          </a>
+        </div>
+
+        <!-- Housing Insights -->
+        <div class="col-md-3">
+          <a href="news.html" class="text-decoration-none text-reset d-block">
+            <div class="card p-4 border-0 shadow-sm h-100 link-card" role="button" tabindex="0">
+              <div class="icon-circle bg-warning-subtle text-warning mb-3">
+                <i class="bi bi-bar-chart-fill fs-2"></i>
+              </div>
+              <h5 class="fw-semibold mb-2">Housing Insights</h5>
+              <p class="text-muted small mb-0">
+                Stay updated with housing trends, policy changes, market analysis and expert buying tips.
+              </p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Properties -->
+  <section class="py-5 bg-light">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold mb-0">Featured HDB Properties</h3>
+        <a href="properties.html" class="btn btn-dark rounded-pill">View All Properties</a>
+      </div>
+      <p class="text-muted mb-4">Discover the best resale and rental HDB flats in Singapore.</p>
+      <div id="featuredProperties" class="row g-4"></div>
+    </div>
+  </section>
+
+  <!-- Property Modal -->
+  <div id="propertyModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pm-title">Property Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <img id="pm-image" class="img-fluid rounded mb-3" alt="Property image">
+          <h4 class="text-success fw-bold" id="pm-price">$0</h4>
+          <p><strong>Lease:</strong> <span id="pm-lease">—</span></p>
+          <p><strong>Price/sqft:</strong> <span id="pm-psf">—</span></p>
+          <p><strong>Trend:</strong> <span id="pm-trend">—</span></p>
+          <hr>
+          <p class="mb-0"><strong>Address:</strong> <span id="pm-address"></span></p>
+          <p class="text-muted small" id="pm-meta"></p>
+          <div class="row text-center mt-3">
+            <div class="col"><strong id="pm-bed">—</strong><div>Bedrooms</div></div>
+            <div class="col"><strong id="pm-bath">—</strong><div>Bathrooms</div></div>
+            <div class="col"><strong id="pm-sqft">—</strong><div>Sqft</div></div>
+            <div class="col"><strong id="pm-mrt">—</strong><div>MRT</div></div>
+          </div>
+          <hr>
+          <p id="pm-desc"></p>
+          <h6 class="mt-4 fw-bold">Price History</h6>
+          <div id="pm-history" class="list-group small"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button class="btn btn-dark">Contact Agent</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="text-center py-4 border-top bg-white">
+    <small>© 2025 MyHDBSense. All rights reserved.</small>
+  </footer>
+
+  <!-- JS Includes -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/main.js"></script> 
+
+  <!-- DataService.js -->
+  <script>
+    class DataService {
+      constructor(csvPath = "../api/RFP.csv") {
+        this.csvPath = csvPath;
+        this.data = [];
+        this.photos = [
+          "https://images.unsplash.com/photo-1559329146-807aff9ff1fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+          "https://images.unsplash.com/photo-1654506012740-09321c969dc2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+          "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+          "https://images.unsplash.com/photo-1590490360182-c33d57733427?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+          "https://images.unsplash.com/photo-1560185008-b033106afce3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
+        ];
+      }
+
+      async load() {
+        const res = await fetch(this.csvPath);
+        const text = await res.text();
+        const rows = text.trim().split("\n").map(l => l.split(","));
+        const headers = rows.shift().map(h => h.trim());
+        this.data = rows.slice(0, 20).map((r, i) => {
+          const o = {};
+          headers.forEach((h, j) => (o[h] = (r[j] || "").trim()));
+          o.image = this.photos[i % this.photos.length];
+          o._price = parseFloat(o["Resale Price"] || 0);
+          return o;
+        });
+      }
+
+      formatCurrency(n) {
+        return "$" + (Number(n) || 0).toLocaleString("en-SG");
+      }
+    }
+
+    const svc = new DataService("../api/RFP.csv");
+    let featured = [];
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const list = document.getElementById("featuredProperties");
+      await svc.load();
+      featured = svc.data.slice(0, 6);
+
+      if (!featured.length) {
+        list.innerHTML = `<p class="text-muted">No properties found.</p>`;
+        return;
+      }
+
+      list.innerHTML = featured.map((p, i) => `
+        <div class="col-md-4">
+          <div class="card h-100 shadow-sm border-0">
+            <img src="${p.image}" class="card-img-top" alt="HDB Property">
+            <div class="card-body">
+              <h5 class="text-success fw-bold mb-1">${svc.formatCurrency(p._price)}</h5>
+              <h6 class="fw-semibold mb-1">${p["Flat Type"] || ""} in ${p["Town"] || ""}</h6>
+              <p class="text-muted small mb-1">${p["Block"] || ""} ${p["Street Name"] || ""}</p>
+              <p class="text-muted small mb-2">Lease: ${p["Remaining Lease"] || "—"}</p>
+              <button class="btn btn-outline-dark w-100" onclick="openPropertyModal(${i})">View Details</button>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    });
+
+    function openPropertyModal(i) {
+      const p = featured[i];
+      document.getElementById("pm-title").textContent = `${p["Flat Type"]} in ${p["Town"]}`;
+      document.getElementById("pm-image").src = p.image;
+      document.getElementById("pm-price").textContent = svc.formatCurrency(p._price);
+      document.getElementById("pm-lease").textContent = p["Remaining Lease"] || "—";
+      document.getElementById("pm-psf").textContent = "—";
+      document.getElementById("pm-trend").textContent = "+0.74% vs last month";
+      document.getElementById("pm-address").textContent = `${p["Block"]} ${p["Street Name"]}`;
+      document.getElementById("pm-meta").textContent = p["Town"];
+      document.getElementById("pm-bed").textContent = "3";
+      document.getElementById("pm-bath").textContent = "2";
+      document.getElementById("pm-sqft").textContent = "900";
+      document.getElementById("pm-mrt").textContent = "0.3km";
+      document.getElementById("pm-desc").textContent = "Spacious and well-maintained HDB flat in a mature estate.";
+      document.getElementById("pm-history").innerHTML = `
+        <div class="list-group-item d-flex justify-content-between"><span>Apr 2024</span><strong>$680,000</strong></div>
+        <div class="list-group-item d-flex justify-content-between"><span>Mar 2024</span><strong>$675,000</strong></div>
+      `;
+      new bootstrap.Modal(document.getElementById("propertyModal")).show();
+    }
+
+      <footer class="text-center py-4 border-top bg-white">
+    <small>© 2025 MyHDBSense. All rights reserved.</small>
+  </footer>
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>MyHDBSense | Article</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/style.css"/>
+</head>
+<body>
+
+  <div data-include="../assets/components/navbar.html"></div>
+
+  <section class="container py-5" id="articleContainer">
+    <p>Loading article…</p>
+  </section>
+
+  <footer class="text-center">© 2025 MyHDBSense. All rights reserved.</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/main.js"></script>
+  <script>
+    const articles = {
+      1:{title:"HDB Resale Prices Hit New High in 2025", img:"https://images.unsplash.com/photo-1600585154340-be6161a56a0c", body:"Singapore's HDB resale market reached a new peak in 2025, with median prices rising 3.2% in Q1. Experts attribute the growth to strong demand in mature estates and sustained stability."},
+      2:{title:"New BTO Launches Announced for 2026", img:"https://images.unsplash.com/photo-1597006986810-9b07b2eec3f4", body:"HDB will launch over 17,000 new flats across 7 towns in 2026, providing more options for first-time buyers. The launches include projects in Queenstown, Tampines, and Bukit Batok."},
+      3:{title:"Interest Rates Stable Amid Cooling Measures", img:"https://images.unsplash.com/photo-1600047508830-9af46b1730e6", body:"The MAS indicated interest rates will likely remain stable in 2025, easing concerns of rising mortgage costs and supporting steady market conditions."}
+    };
+
+    const params = new URLSearchParams(location.search);
+    const article = articles[params.get("id")];
+    const el = document.getElementById("articleContainer");
+
+    el.innerHTML = article ? `
+      <a href="news.html" class="btn btn btn-outline-primary px-3 py-1 d-inline-flex align-items-center gap-2 backhome-btn">← Back to News</a>
+      <h2 class="fw-bold mb-3">${article.title}</h2>
+      <img src="${article.img}" class="img-fluid rounded mb-4">
+      <p class="lead">${article.body}</p>
+    ` : `<p>Article not found.</p>`;
+  </script>
+</body>
+</html>

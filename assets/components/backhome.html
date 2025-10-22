@@ -1,0 +1,30 @@
+<!-- Back to Home (unified component) -->
+<div class="container my-4">
+  <a href="#" id="mhsBackHome"
+     class="btn btn-outline-secondary rounded-pill px-3 py-2 d-inline-flex align-items-center gap-2 shadow-sm">
+    <i class="bi bi-arrow-left fs-5"></i>
+    <span class="fw-semibold">Back to Home</span>
+  </a>
+</div>
+
+<style>
+  .btn-outline-secondary { border-width:1.5px; font-size:.95rem; transition:all .2s ease-in-out; }
+  .btn-outline-secondary:hover { background:#f8f9fa; transform:translateY(-1px); }
+</style>
+
+<script>
+  (function () {
+    const el = document.getElementById('mhsBackHome');
+    if (!el) return;
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (history.length > 1) return history.back();
+      const tries = ["index.html","../index.html","../../index.html","../../../index.html","/index.html"];
+      for (const t of tries) {
+        const u = new URL(t, location.href);
+        location.href = u.href;
+        break;
+      }
+    });
+  })();
+</script>

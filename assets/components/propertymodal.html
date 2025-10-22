@@ -1,0 +1,125 @@
+<!-- Property Details Modal (reusable) -->
+<div class="modal fade" id="propertyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 rounded-4 shadow-lg">
+      <div class="modal-header border-0">
+        <h5 id="pm-title" class="modal-title fw-bold"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Image -->
+        <div class="ratio ratio-16x9 mb-3">
+          <img id="pm-image" alt="HDB" style="object-fit:cover;border-radius:.75rem;">
+        </div>
+
+        <!-- Price panel -->
+        <div class="p-3 rounded-3 mb-3" style="background:#eef8f0;border:1px solid #d7f0dc;">
+          <div class="d-flex flex-wrap align-items-center gap-4">
+            <div>
+              <div class="text-muted small">Resale Price</div>
+              <div id="pm-price" class="h3 mb-0 fw-bold text-success"></div>
+            </div>
+            <div>
+              <div class="text-muted small">Price per sqft</div>
+              <div id="pm-psf" class="fw-semibold">—</div>
+            </div>
+            <div>
+              <div class="text-muted small">Market trend</div>
+              <div id="pm-trend" class="fw-semibold">—</div>
+            </div>
+            <div>
+              <div class="text-muted small">Lease remaining</div>
+              <div id="pm-lease" class="fw-semibold">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Address + key facts -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-8">
+            <div class="small text-muted">Address</div>
+            <div id="pm-address" class="fw-semibold"></div>
+            <div class="small text-muted">Town / Flat Model</div>
+            <div id="pm-meta" class="fw-semibold"></div>
+          </div>
+          <div class="col-md-4">
+            <div class="row text-center g-2">
+              <div class="col-6">
+                <div class="p-2 rounded border">
+                  <div class="small text-muted">Bedrooms</div>
+                  <div id="pm-bed" class="fw-bold">—</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="p-2 rounded border">
+                  <div class="small text-muted">Bathrooms</div>
+                  <div id="pm-bath" class="fw-bold">—</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="p-2 rounded border">
+                  <div class="small text-muted">Sqft</div>
+                  <div id="pm-sqft" class="fw-bold">—</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="p-2 rounded border">
+                  <div class="small text-muted">Nearest MRT</div>
+                  <div id="pm-mrt" class="fw-bold">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+          <h6 class="fw-bold">Description</h6>
+          <p id="pm-desc" class="mb-0"></p>
+        </div>
+
+        <!-- Amenities (demo) -->
+        <div class="mb-3">
+          <h6 class="fw-bold">Nearby Amenities & Distance</h6>
+          <div class="row small">
+            <div class="col-md-6">
+              <div class="d-flex justify-content-between"><span>Hawker Center</span><span id="pm-hawker">200m</span></div>
+              <div class="d-flex justify-content-between"><span>Shopping Mall</span><span id="pm-mall">450m</span></div>
+              <div class="d-flex justify-content-between"><span>Supermarket</span><span id="pm-super">180m</span></div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex justify-content-between"><span>Community Center</span><span id="pm-cc">350m</span></div>
+              <div class="d-flex justify-content-between"><span>Polyclinic</span><span id="pm-poly">600m</span></div>
+              <div class="d-flex justify-content-between"><span>Primary School</span><span id="pm-school">300m</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Amenity Score -->
+        <div class="mb-3 p-3 rounded-3 border">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold mb-0">Neighborhood Amenity Score</h6>
+            <span id="pm-score" class="badge bg-warning text-dark">8.7/10</span>
+          </div>
+          <div class="small"><div>Food & Dining <span class="float-end" id="pm-score-food">8.5</span></div><div class="progress"><div class="progress-bar" id="pm-bar-food" style="width:85%"></div></div></div>
+          <div class="small mt-2"><div>Transport <span class="float-end" id="pm-score-transport">9.0</span></div><div class="progress"><div class="progress-bar" id="pm-bar-transport" style="width:90%"></div></div></div>
+          <div class="small mt-2"><div>Recreation <span class="float-end" id="pm-score-recreation">8.0</span></div><div class="progress"><div class="progress-bar" id="pm-bar-recreation" style="width:80%"></div></div></div>
+          <div class="small mt-2"><div>Education <span class="float-end" id="pm-score-edu">9.5</span></div><div class="progress"><div class="progress-bar" id="pm-bar-edu" style="width:95%"></div></div></div>
+          <div class="small text-muted mt-2">Score based on proximity and quality of amenities within 1km radius (demo).</div>
+        </div>
+
+        <!-- Price History -->
+        <div>
+          <h6 class="fw-bold">Price History</h6>
+          <div id="pm-history" class="list-group list-group-flush"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer border-0">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-dark" type="button">Schedule Viewing</button>
+      </div>
+    </div>
+  </div>
+</div>

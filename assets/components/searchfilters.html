@@ -1,0 +1,155 @@
+<!-- HDB Search Filters (Bootstrap 5) -->
+<div class="card border-0 shadow-sm p-3 p-md-4 mhs-section-card">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-funnel fs-5 text-secondary"></i>
+      <h5 class="fw-semibold mb-0">HDB Search Filters</h5>
+    </div>
+
+    <!-- Collapse toggle -->
+    <button
+      type="button"
+      class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+      data-bs-toggle="collapse"
+      data-bs-target="#advFilters"
+      aria-expanded="false"
+      aria-controls="advFilters"
+      id="advToggleBtn"
+    >
+      Expand
+    </button>
+  </div>
+
+  <form id="searchFilters" class="row g-3">
+    <!-- Quick filters -->
+    <div class="col-md-3">
+      <label class="form-label">Region / Town</label>
+      <input class="form-control" name="town" placeholder="e.g. Queenstown">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Purpose</label>
+      <select name="purpose" class="form-select">
+        <option value="">Both Resale & Rental</option>
+        <option value="resale">Resale</option>
+        <option value="rental">Rental</option>
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Bedrooms</label>
+      <select name="bedrooms" class="form-select">
+        <option value="">Any</option>
+        <option value="1">1+</option>
+        <option value="2">2+</option>
+        <option value="3">3+</option>
+        <option value="4">4+</option>
+        <option value="5">5+</option>
+      </select>
+    </div>
+
+    <div class="col-md-3 d-flex align-items-end">
+      <div class="form-check ms-md-3">
+        <input class="form-check-input" type="checkbox" id="verifiedOnly" name="verifiedOnly">
+        <label class="form-check-label" for="verifiedOnly">Show verified listings only</label>
+      </div>
+    </div>
+
+    <!-- Budget -->
+    <div class="col-12">
+      <label class="form-label">$ Budget Range</label>
+      <div class="row g-2">
+        <div class="col-6 col-md-3">
+          <input type="number" class="form-control" name="minPrice" placeholder="Min (e.g. 300000)">
+        </div>
+        <div class="col-6 col-md-3">
+          <input type="number" class="form-control" name="maxPrice" placeholder="Max (e.g. 900000)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced -->
+    <div class="col-12">
+      <div class="collapse" id="advFilters">
+        <hr class="my-3">
+
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Flat Type</label>
+            <select name="flatType" class="form-select">
+              <option value="">Any</option>
+              <option>1 ROOM</option>
+              <option>2 ROOM</option>
+              <option>3 ROOM</option>
+              <option>4 ROOM</option>
+              <option>5 ROOM</option>
+              <option>EXECUTIVE</option>
+              <option>MULTI-GENERATION</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Flat Model (multi-select)</label>
+            <div class="row row-cols-1 row-cols-md-2 g-2">
+              <div class="col">
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="flatModel" value="3NG"><label class="form-check-label">3NG (New Gen/Modified)</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="flatModel" value="3A"><label class="form-check-label">3A</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="flatModel" value="4A"><label class="form-check-label">4A</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="flatModel" value="4S"><label class="form-check-label">4S (Simplified)</label></div>
+              </div>
+              <div class="col">
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="flatModel" value="5I"><label class="form-check-label">5I</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="flatModel" value="EA"><label class="form-check-label">EA (Exec Apt)</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="flatModel" value="EM"><label class="form-check-label">EM (Exec Maisonette)</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="flatModel" value="MG"><label class="form-check-label">MG (Multi-Generation)</label></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Near MRT ≤ (km)</label>
+            <input type="number" class="form-control" min="0" max="10" step="0.5" placeholder="e.g. 2" name="mrtKm">
+            <div class="form-text small text-muted">Enter maximum distance in km</div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Floor Area</label>
+            <input type="number" class="form-control" name="areaMin" placeholder="e.g. 70 sqm">
+            <div class="form-text small text-muted">Enter minimum floor area in sqm</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Lease Commence</label>
+            <input type="number" class="form-control" name="leaseCommenceMin" placeholder="e.g. 1995">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Remaining Lease</label>
+            <input type="number" class="form-control" name="remainingLeaseMin" placeholder="e.g. 70">
+            <div class="form-text small text-muted">Enter minimum remaining lease</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Storey Range contains</label>
+            <input type="text" class="form-control" name="storeyContains" placeholder="e.g. 10 TO 12">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="col-12 pt-2">
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-dark flex-fill">Search HDB Properties</button>
+        <button type="reset" class="btn btn-outline-secondary">Reset</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const adv = document.getElementById("advFilters");
+    const btn = document.getElementById("advToggleBtn");
+    if (!adv || !btn) return;
+    adv.addEventListener("shown.bs.collapse", () => btn.textContent = "Collapse");
+    adv.addEventListener("hidden.bs.collapse", () => btn.textContent = "Expand");
+  });
+</script>
