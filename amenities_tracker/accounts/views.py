@@ -88,6 +88,24 @@ def logout_view(request):
 def home(request):
     return render(request, "accounts/home.html")  # render the home page
 
+# Retrieve ONEMAP Token
+def get_onemap_token():
+    url = "https://www.onemap.gov.sg/api/auth/post/getToken"
+    payload = {
+        "email": settings.ONEMAP_EMAIL,
+        "password": settings.ONEMAP_PASSWORD
+    }
+
+    response= requests.post(url, json=payload, timeout=10)
+
+    if response.status_code == 200:
+        data = response.json()
+        print("OneMap token fetched successfully.")
+        print("Token:", data.get("access_token")[:10] + "...")
+        return data.get("access_token")
+    else:
+        print("Error fetching OneMap token:", response.status_code, response.text)
+        return None
 # search for flats within 3km of postal code
 
 def search_flats(request):
@@ -101,7 +119,7 @@ def search_flats(request):
                 f"https://www.onemap.gov.sg/api/common/elastic/search"
                 f"?searchVal={postal_code}&returnGeom=Y&getAddrDetails=Y&pageNum=1"
             )
-            headers = {"Authorization": settings.ONEMAP_TOKEN}
+            headers = {"Authorization": get_onemap_token()}
             resp = requests.get(url, headers=headers, timeout=10).json()
             if resp.get("found", 0) > 0:
                 lat = float(resp["results"][0]["LATITUDE"])
@@ -138,7 +156,7 @@ def search_flats(request):
         # Step 3: Fetch flats from the user's town
         if lat and lon and postal_towns:
             dataset_id = "f1765b54-a209-4718-8d38-a39237f502b3" # HDB resale flats dataset : 2024 onward
-            headers = {"Authorization": settings.ONEMAP_TOKEN}
+            headers = {"Authorization": get_onemap_token()}
             months = [f"2025-{str(m).zfill(2)}" for m in range(1, 10)]  # '2025-01' to '2025-09'
             all_records = []
 
@@ -338,3 +356,75 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     distance = R * c
     return distance
+
+# ------ Amneities Tracker Views ------
+def search_amenities(request):
+    postal_code = request.GET.get("q")
+    amenities = []
+
+    if postal_code:
+        # Step 1: Get postal code coordinates from OneMap
+        try:
+            url = (
+                f"https://www.onemap.gov.sg/api/common/elastic/search"
+                f"?searchVal={postal_code}&returnGeom=Y&getAddrDetails=Y&pageNum=1"
+            )
+            headers = {"Authorization": get_onemap_token()}
+            resp = requests.get(url, headers=headers, timeout=10).json()
+            if resp.get("found", 0) > 0:
+                lat = float(resp["results"][0]["LATITUDE"])
+                lon = float(resp["results"][0]["LONGITUDE"])
+            else:
+                lat, lon = None, None
+        except Exception as e:
+            print("Error fetching postal code:", e)
+            lat, lon = None, None
+
+        # Step 2: Fetch amenities within 3km radius
+        if lat and lon:
+            boundingbox = get_bounding_box(lat, lon, 3.0)
+            south_lat = min(b[0] for b in boundingbox)
+            north_lat = max(b[0] for b in boundingbox)
+            west_lng = min(b[1] for b in boundingbox)
+            east_lng = max(b[1] for b in boundingbox)
+
+            token = get_onemap_token()
+            for query in ["kindergartens", "mrt_station", "supermarket", "clinic"]:
+                results = get_amenities_theme(query, south_lat, west_lng, north_lat, east_lng, token)
+                for r in results:
+                    amenity_lat = float(r.get("LATITUDE"))
+                    amenity_lon = float(r.get("LONGITUDE"))
+                    dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                    if dist <= 3.0:
+                        amenities.append({
+                            "name": r.get("NAME"),
+                            "type": query,
+                            "latitude": amenity_lat,
+                            "longitude": amenity_lon,
+                            "distance": round(dist, 2),
+                        })
+
+    context = {
+        "amenities": amenities,
+        "center_lat": lat if lat else 1.3521,
+        "center_lng": lon if lon else 103.8198,
+    }
+    return render(request, "accounts/amenities_results.html", context)
+
+# ----- fetch amenities from OneMap themes API ------
+def get_amenities_theme(query_name, south_lat, west_lng, north_lat, east_lng, token):
+    url = (
+        "https://www.onemap.gov.sg/api/public/themesvc/retrieveTheme"
+        f"?queryName={query_name}&extents={south_lat},{west_lng},{north_lat},{east_lng}"
+    )
+    headers = {"Authorization": token}
+    response = requests.get(url, headers=headers)
+    print(f"Raw response for {query_name}: {response.text}")
+    print(response.status_code, response.text)
+
+    try:
+        data = response.json()
+        return data.get("SrchResults", [])
+    except Exception as e:
+        print(f"Error parsing response: {e}")
+        return []
