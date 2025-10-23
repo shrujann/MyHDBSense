@@ -111,6 +111,7 @@ def get_onemap_token():
 def search_flats(request):
     postal_code = request.GET.get("q")
     flats = []
+    token = get_onemap_token()
 
     if postal_code:
         # Step 1: Get postal code coordinates from OneMap
@@ -119,7 +120,7 @@ def search_flats(request):
                 f"https://www.onemap.gov.sg/api/common/elastic/search"
                 f"?searchVal={postal_code}&returnGeom=Y&getAddrDetails=Y&pageNum=1"
             )
-            headers = {"Authorization": get_onemap_token()}
+            headers = {"Authorization": token}
             resp = requests.get(url, headers=headers, timeout=10).json()
             if resp.get("found", 0) > 0:
                 lat = float(resp["results"][0]["LATITUDE"])
@@ -156,18 +157,18 @@ def search_flats(request):
         # Step 3: Fetch flats from the user's town
         if lat and lon and postal_towns:
             dataset_id = "f1765b54-a209-4718-8d38-a39237f502b3" # HDB resale flats dataset : 2024 onward
-            headers = {"Authorization": get_onemap_token()}
+            headers = {"Authorization": token}
             months = [f"2025-{str(m).zfill(2)}" for m in range(1, 10)]  # '2025-01' to '2025-09'
             all_records = []
 
             try:
-                with concurrent.futures.ThreadPoolExecutor() as executor:
+                with concurrent.futures.ThreadPoolExecutor() as executor: # multiple thread to speed up data fetch
                     futures = [
                     executor.submit(fetch_resale_flats_for_town, town, dataset_id, month)
                     for town in postal_towns
                     for month in months
                 ]
-                for future in concurrent.futures.as_completed(futures):
+                for future in concurrent.futures.as_completed(futures): # process each completed future
                     records = future.result()
                     all_records.extend(records)
 
@@ -191,9 +192,9 @@ def search_flats(request):
                                     flats.append({
                                         "town": r.get("town"),
                                         "flat_type": r.get("flat_type"),
-                                        "model": r.get("flat_model"),
+                                        "street_name": r.get("street_name"),
                                         "floor_area": r.get("floor_area_sqm"),
-                                        "lease_commence": r.get("lease_commence_date"),
+                                        "remaining_lease": r.get("remaining_lease"),
                                         "resale_price": r.get("resale_price"),
                                         "latitude": flat_lat,
                                         "longitude": flat_lon,
@@ -322,7 +323,7 @@ def fetch_resale_flats_for_town(town, dataset_id, months=None):
 
     params = {
         "resource_id": dataset_id,
-        "limit": 5,
+        "limit": 10,
         "filters": json.dumps(filters)
     }
 
@@ -361,6 +362,8 @@ def haversine(lat1, lon1, lat2, lon2):
 def search_amenities(request):
     postal_code = request.GET.get("q")
     amenities = []
+    token = get_onemap_token()
+    # categories = 
 
     if postal_code:
         # Step 1: Get postal code coordinates from OneMap
@@ -369,7 +372,7 @@ def search_amenities(request):
                 f"https://www.onemap.gov.sg/api/common/elastic/search"
                 f"?searchVal={postal_code}&returnGeom=Y&getAddrDetails=Y&pageNum=1"
             )
-            headers = {"Authorization": get_onemap_token()}
+            headers = {"Authorization": token}
             resp = requests.get(url, headers=headers, timeout=10).json()
             if resp.get("found", 0) > 0:
                 lat = float(resp["results"][0]["LATITUDE"])
@@ -379,52 +382,16 @@ def search_amenities(request):
         except Exception as e:
             print("Error fetching postal code:", e)
             lat, lon = None, None
+            
+        # Step 2: Define bounding box around the coordinates
+        boundingbox = get_bounding_box(lat, lon, 1.0) if lat and lon else None
 
-        # Step 2: Fetch amenities within 3km radius
-        if lat and lon:
-            boundingbox = get_bounding_box(lat, lon, 3.0)
-            south_lat = min(b[0] for b in boundingbox)
-            north_lat = max(b[0] for b in boundingbox)
-            west_lng = min(b[1] for b in boundingbox)
-            east_lng = max(b[1] for b in boundingbox)
+        # Step 3: Fetch amenities within bounding box
+        if lat and lon and boundingbox:
+            south_lat = min(boundingbox, key=lambda x: x[0])[0]
+            north_lat = max(boundingbox, key=lambda x: x[0])[0]
+            west_lng = min(boundingbox, key=lambda x: x[1])[1]
+            east_lng = max(boundingbox, key=lambda x: x[1])[1]
 
-            token = get_onemap_token()
-            for query in ["kindergartens", "mrt_station", "supermarket", "clinic"]:
-                results = get_amenities_theme(query, south_lat, west_lng, north_lat, east_lng, token)
-                for r in results:
-                    amenity_lat = float(r.get("LATITUDE"))
-                    amenity_lon = float(r.get("LONGITUDE"))
-                    dist = haversine(lat, lon, amenity_lat, amenity_lon)
-                    if dist <= 3.0:
-                        amenities.append({
-                            "name": r.get("NAME"),
-                            "type": query,
-                            "latitude": amenity_lat,
-                            "longitude": amenity_lon,
-                            "distance": round(dist, 2),
-                        })
-
-    context = {
-        "amenities": amenities,
-        "center_lat": lat if lat else 1.3521,
-        "center_lng": lon if lon else 103.8198,
-    }
-    return render(request, "accounts/amenities_results.html", context)
-
-# ----- fetch amenities from OneMap themes API ------
-def get_amenities_theme(query_name, south_lat, west_lng, north_lat, east_lng, token):
-    url = (
-        "https://www.onemap.gov.sg/api/public/themesvc/retrieveTheme"
-        f"?queryName={query_name}&extents={south_lat},{west_lng},{north_lat},{east_lng}"
-    )
-    headers = {"Authorization": token}
-    response = requests.get(url, headers=headers)
-    print(f"Raw response for {query_name}: {response.text}")
-    print(response.status_code, response.text)
-
-    try:
-        data = response.json()
-        return data.get("SrchResults", [])
-    except Exception as e:
-        print(f"Error parsing response: {e}")
-        return []
+        
+            
