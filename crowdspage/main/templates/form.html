@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Form Filling Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f4f9;
+    }
+
+    .form-container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .form-container h2 {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: calc(100% - 22px);
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .form-group textarea {
+      resize: none;
+      height: 100px;
+    }
+
+    .icon-group {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .icon-group label {
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .icon-group input[type="radio"] {
+      display: none;
+    }
+
+    .icon-group img {
+      width: 50px;
+      height: 50px;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      transition: border-color 0.3s ease;
+    }
+
+    .icon-group input[type="radio"]:checked + img {
+      border-color: #007bff;
+    }
+
+    .form-group button {
+      width: 100%;
+      padding: 10px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .form-group button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <!-- Return logo at the top left -->
+    <a href="{% url 'mappage' %}" class="return-logo">
+      <img src="https://img.icons8.com/ios-filled/50/000000/left.png" alt="Return to Map">
+    </a>
+
+    <h2>Fill in the Missing/New Amenities</h2>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="latitude">Latitude:</label>
+        <input type="text" id="latitude" name="latitude" value="{{ form.latitude.value|default:'' }}" readonly required style="background-color: #d3d3d3; color: #555;">
+      </div>
+
+      <div class="form-group">
+        <label for="longitude">Longitude:</label>
+        <input type="text" id="longitude" name="longitude" value="{{ form.longitude.value|default:'' }}" readonly required style="background-color: #d3d3d3; color: #555;">
+      </div>
+
+      <div class="form-group">
+        <label>Select Missing or New Amenities:</label>
+        <div class="icon-group">
+          <label>
+            <input type="radio" name="amenity" value="transport" {% if form.amenity.value == "transport" %}checked{% endif %}>
+            <img src="https://img.icons8.com/ios-filled/50/000000/bus.png" alt="Transport">
+            <div>Transport</div>
+          </label>
+          <label>
+            <input type="radio" name="amenity" value="food" {% if form.amenity.value == "food" %}checked{% endif %}>
+            <img src="https://img.icons8.com/ios-filled/50/000000/restaurant.png" alt="Hawker/Food">
+            <div>Food</div>
+          </label>
+          <label>
+            <input type="radio" name="amenity" value="parks" {% if form.amenity.value == "parks" %}checked{% endif %}>
+            <img src="https://img.icons8.com/?size=100&id=9856&format=png&color=000000" alt="Parks">
+            <div>Parks</div>
+          </label>
+          <label>
+            <input type="radio" name="amenity" value="schools" {% if form.amenity.value == "schools" %}checked{% endif %}>
+            <img src="https://img.icons8.com/ios-filled/50/000000/school.png" alt="Schools">
+            <div>Schools</div>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" placeholder="Enter a description" required>{{ form.description.value|default:'' }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <button type="submit">Submit</button>
+      </div>
+    </form>
+  </div>
+  
+  <script>
+
+    // Pre-fill the latitude and longitude fields with values from the URL
+  function prefillLocation() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const lat = urlParams.get("lat");
+    const lng = urlParams.get("lng");
+
+    if (lat && lng) {
+      const latitudeInput = document.getElementById("latitude");
+      const longitudeInput = document.getElementById("longitude");
+
+    // Set the values of the latitude and longitude fields
+    latitudeInput.value = lat;
+    longitudeInput.value = lng;
+    }
+  }
+
+// Run the prefill function when the page loads
+window.onload = () => {
+prefillLocation();
+};
+  </script>
+  
+</body>
+</html>
