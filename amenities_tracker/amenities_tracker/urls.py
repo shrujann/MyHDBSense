@@ -20,4 +20,5 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls), # admin site
     path("accounts/", include("accounts.urls")),  # include the accounts app urls
+    path("map/", include("mappage.urls")),  # include the mappage app urls for map functionality
 ]
