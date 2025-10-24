@@ -25,4 +25,9 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'), # logout view
     path('home/', views.home, name='home'), # home view
     path("search/", views.search_flats, name="search_flats"), # search flats view
+
+    path('roommate/profile/', views.roommate_profile_edit, name='roommate_profile_edit'),
+    path('roommate/sharing-request/', views.sharing_request, name='sharing_request'),
+    path('roommate/contact/<int:user_id>/', views.contact_roommate, name='contact_roommate'),
+
 ]
