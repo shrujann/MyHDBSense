@@ -12,9 +12,16 @@
 {% endif %}
 <a href="{% url 'register' %}"><button>Register</button></a>
 
+<h2>Roommate Finder</h2>
+<p>Find your perfect roommate!</p>
+<a href="{% url 'roommate_profile_edit' %}"><button>My Roommate Profile</button></a>
+<a href="{% url 'sharing_request' %}"><button>Browse Sharing Requests</button></a>
+
 <h2>Search HDB Resale Flats</h2>
 <form method="get" action="{% url 'search_flats' %}">
     <input type="text" name="q" placeholder="Enter postal code" required>
     <button type="submit">Search</button>
 </form>
 
+<h2>Crowdsharing</h2>
+<a href="{% url 'mappage' %}"><button>crowdsharing</button></a>

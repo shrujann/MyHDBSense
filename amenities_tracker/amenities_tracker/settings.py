@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django_otp', # for OTP support
     'django_otp.plugins.otp_email', # for email-based OTP
     'accounts', # custom accounts app
+    'mappage', # map and amenities tracking app
 ]
 
 MIDDLEWARE = [

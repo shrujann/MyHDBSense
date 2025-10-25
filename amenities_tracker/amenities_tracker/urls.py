@@ -21,5 +21,6 @@ from django.views.generic import RedirectView
 urlpatterns = [
     path('admin/', admin.site.urls), # admin site
     path("accounts/", include("accounts.urls")),  # include the accounts app urls
+    path('map/', include('mappage.urls')),  # include the mappage app urls
     path('', RedirectView.as_view(pattern_name='home', permanent=False)), 
 ]
