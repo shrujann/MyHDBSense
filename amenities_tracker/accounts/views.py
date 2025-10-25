@@ -493,6 +493,29 @@ def search_amenities(request):
                                 "longitude": amenity_lon,
                                 "distance": round(dist, 2),
                             })
+            if category == "clinic":
+                records = findchas(postal_code)
+    
+                # Coordinates already included - no OneMap lookup needed!
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    
+                    if amenity_lat and amenity_lon:
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),
+                                "type": "CHAS Clinic",
+                                "address": record.get("address"),
+                                "postal_code": record.get("postal_code"),
+                                "phone": record.get("phone"),
+                                "building_name": record.get("building_name"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "distance": round(dist, 2),
+                            })
 
         context = {
             "amenities": amenities,
@@ -714,6 +737,88 @@ def findlibrary(postalcode):
         
     except Exception as e:
         print(f"Error fetching library data: {e}")
+        return []
+
+# -------- CHAS Clinic Fetching Function --------
+
+def findchas(postalcode):
+    """
+    Fetch CHAS clinics from Singapore government API (MOH dataset - GeoJSON version)
+    Returns list of dicts with clinic name, address, postal_code, latitude, longitude
+    """
+    dataset_id = "d_548c33ea2d99e29ec63a7cc9edcccedc"  # MOH CHAS Clinics (GEOJSON)
+    postal_code = str(postalcode)
+    
+    try:
+        # Step 1: Poll for download URL
+        url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+        response = requests.get(url, timeout=10)
+        json_data = response.json()
+        
+        if json_data['code'] != 0:
+            print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
+            return []
+        
+        # Step 2: Get actual data from the download URL
+        download_url = json_data['data']['url']
+        response = requests.get(download_url, timeout=10)
+        geojson_data = json.loads(response.text)
+        
+        # Step 3: Parse GeoJSON features
+        clinics = []
+        
+        for feature in geojson_data['features']:
+            # Parse HTML description to extract attributes
+            soup = BeautifulSoup(feature['properties']['Description'], 'html.parser')
+            rows = soup.find_all('tr')
+            
+            # Extract data from HTML table
+            data = {}
+            for row in rows[1:]:  # Skip header row
+                cells = row.find_all(['th', 'td'])
+                if len(cells) == 2:
+                    key = cells[0].get_text(strip=True)
+                    value = cells[1].get_text(strip=True)
+                    data[key] = value if value else None
+            
+            # Get coordinates
+            coords = feature['geometry']['coordinates']
+            
+            # Build full address
+            address_parts = []
+            if data.get('BLK_HSE_NO'):
+                address_parts.append(data.get('BLK_HSE_NO'))
+            if data.get('STREET_NAME'):
+                address_parts.append(data.get('STREET_NAME'))
+            if data.get('BUILDING_NAME'):
+                address_parts.append(data.get('BUILDING_NAME'))
+            
+            full_address = ' '.join(address_parts) if address_parts else None
+            
+            # Create clinic record
+            clinic = {
+                "name": data.get('HCI_NAME'),
+                "hci_code": data.get('HCI_CODE'),
+                "licence_type": data.get('LICENCE_TYPE'),
+                "phone": data.get('HCI_TEL'),
+                "address": full_address,
+                "postal_code": data.get('POSTAL_CD'),
+                "building_name": data.get('BUILDING_NAME'),
+                "floor_number": data.get('FLOOR_NO'),
+                "unit_number": data.get('UNIT_NO'),
+                "street_name": data.get('STREET_NAME'),
+                "block_house_no": data.get('BLK_HSE_NO'),
+                "programme_code": data.get('CLINIC_PROGRAMME_CODE'),
+                "latitude": coords[1],  # GeoJSON is [lon, lat]
+                "longitude": coords[0],
+            }
+            
+            clinics.append(clinic)
+        
+        return clinics
+        
+    except Exception as e:
+        print(f"Error fetching CHAS clinic data: {e}")
         return []
 
 
