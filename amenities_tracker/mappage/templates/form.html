@@ -12,8 +12,9 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       background-color: #f4f4f9;
+      padding: 20px;
     }
 
     .form-container {
@@ -22,7 +23,7 @@
       border-radius: 8px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       width: 100%;
-      max-width: 500px;
+      max-width: 700px;
     }
 
     .form-container h2 {
@@ -55,31 +56,52 @@
       height: 100px;
     }
 
-    .icon-group {
-      display: flex;
-      justify-content: space-between;
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
       margin-bottom: 15px;
     }
 
-    .icon-group label {
+    .icon-option {
       text-align: center;
       cursor: pointer;
+      padding: 10px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
     }
 
-    .icon-group input[type="radio"] {
+    .icon-option:hover {
+      background-color: #f8f9fa;
+      border-color: #dee2e6;
+    }
+
+    .icon-option input[type="radio"] {
       display: none;
     }
 
-    .icon-group img {
-      width: 50px;
-      height: 50px;
-      border: 2px solid transparent;
-      border-radius: 8px;
-      transition: border-color 0.3s ease;
+    .icon-option img {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 8px;
+      border-radius: 6px;
     }
 
-    .icon-group input[type="radio"]:checked + img {
+    .icon-option div {
+      font-size: 12px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .icon-option input[type="radio"]:checked + .option-content {
+      color: #007bff;
+    }
+
+    .icon-option input[type="radio"]:checked ~ .option-content,
+    .icon-option:has(input[type="radio"]:checked) {
       border-color: #007bff;
+      background-color: #e7f3ff;
     }
 
     .form-group button {
@@ -95,6 +117,16 @@
 
     .form-group button:hover {
       background-color: #0056b3;
+    }
+
+    .return-logo {
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+
+    .return-logo img {
+      width: 24px;
+      height: 24px;
     }
   </style>
 </head>
@@ -120,26 +152,117 @@
 
       <div class="form-group">
         <label>Select Missing or New Amenities:</label>
-        <div class="icon-group">
-          <label>
-            <input type="radio" name="amenity" value="transport" {% if form.amenity.value == "transport" %}checked{% endif %}>
-            <img src="https://img.icons8.com/ios-filled/50/000000/bus.png" alt="Transport">
-            <div>Transport</div>
-          </label>
-          <label>
-            <input type="radio" name="amenity" value="food" {% if form.amenity.value == "food" %}checked{% endif %}>
-            <img src="https://img.icons8.com/ios-filled/50/000000/restaurant.png" alt="Hawker/Food">
-            <div>Food</div>
-          </label>
-          <label>
-            <input type="radio" name="amenity" value="parks" {% if form.amenity.value == "parks" %}checked{% endif %}>
-            <img src="https://img.icons8.com/?size=100&id=9856&format=png&color=000000" alt="Parks">
-            <div>Parks</div>
-          </label>
-          <label>
+        <div class="icon-grid">
+          <label class="icon-option">
             <input type="radio" name="amenity" value="schools" {% if form.amenity.value == "schools" %}checked{% endif %}>
-            <img src="https://img.icons8.com/ios-filled/50/000000/school.png" alt="Schools">
-            <div>Schools</div>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/school.png" alt="Schools">
+              <div>Schools</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="eldercare" {% if form.amenity.value == "eldercare" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/wheelchair.png" alt="Eldercare">
+              <div>Eldercare</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="mrt" {% if form.amenity.value == "mrt" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/train.png" alt="MRT">
+              <div>MRT</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="library" {% if form.amenity.value == "library" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/library.png" alt="Library">
+              <div>Library</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="clinic" {% if form.amenity.value == "clinic" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/hospital.png" alt="Clinic">
+              <div>Clinic</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="hawker" {% if form.amenity.value == "hawker" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/restaurant.png" alt="Hawker">
+              <div>Hawker</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="tourism" {% if form.amenity.value == "tourism" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/camera.png" alt="Tourism">
+              <div>Tourism</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="preschool" {% if form.amenity.value == "preschool" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/kindergarten.png" alt="Preschool">
+              <div>Preschool</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="childcare" {% if form.amenity.value == "childcare" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/baby.png" alt="Childcare">
+              <div>Childcare</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="gym" {% if form.amenity.value == "gym" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/dumbbell.png" alt="Gym">
+              <div>Gym</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="sportsg" {% if form.amenity.value == "sportsg" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/football.png" alt="SportSG">
+              <div>SportSG</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="parks" {% if form.amenity.value == "parks" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/park.png" alt="Parks">
+              <div>Parks</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="marketcentre" {% if form.amenity.value == "marketcentre" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/shopping-cart.png" alt="Market Centre">
+              <div>Market Centre</div>
+            </div>
+          </label>
+          
+          <label class="icon-option">
+            <input type="radio" name="amenity" value="supermarket" {% if form.amenity.value == "supermarket" %}checked{% endif %}>
+            <div class="option-content">
+              <img src="https://img.icons8.com/ios-filled/50/000000/grocery-store.png" alt="Supermarket">
+              <div>Supermarket</div>
+            </div>
           </label>
         </div>
       </div>
@@ -156,27 +279,26 @@
   </div>
   
   <script>
-
     // Pre-fill the latitude and longitude fields with values from the URL
-  function prefillLocation() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const lat = urlParams.get("lat");
-    const lng = urlParams.get("lng");
+    function prefillLocation() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const lat = urlParams.get("lat");
+      const lng = urlParams.get("lng");
 
-    if (lat && lng) {
-      const latitudeInput = document.getElementById("latitude");
-      const longitudeInput = document.getElementById("longitude");
+      if (lat && lng) {
+        const latitudeInput = document.getElementById("latitude");
+        const longitudeInput = document.getElementById("longitude");
 
-    // Set the values of the latitude and longitude fields
-    latitudeInput.value = lat;
-    longitudeInput.value = lng;
+        // Set the values of the latitude and longitude fields
+        latitudeInput.value = lat;
+        longitudeInput.value = lng;
+      }
     }
-  }
 
-// Run the prefill function when the page loads
-window.onload = () => {
-prefillLocation();
-};
+    // Run the prefill function when the page loads
+    window.onload = () => {
+      prefillLocation();
+    };
   </script>
   
 </body>
