@@ -364,7 +364,7 @@ def search_amenities(request):
     postal_code = request.GET.get("q")
     amenities = []
     token = get_onemap_token()
-    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker", "tourism", "preschool"]
+    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker", "tourism", "preschool", "childcare"]
 
     center_lat, center_lon = None, None
 
@@ -581,7 +581,27 @@ def search_amenities(request):
                                 "last_update": record.get("last_update"),
                                 "distance": round(dist, 2),
                             })
-
+            
+            if category == "childcare":
+                records = findchildcare(postal_code)
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    if amenity_lat and amenity_lon and lat and lon:
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),
+                                "type": "Childcare",
+                                "address": record.get("address"),
+                                "postal_code": record.get("postal_code"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "last_update": record.get("last_update"),
+                                "description": record.get("description"),
+                                "distance": round(dist, 2),
+                            })
+                            
         context = {
             "amenities": amenities,
             "center_lat": center_lat if center_lat else 1.3521,
@@ -1087,6 +1107,75 @@ def findpreschool(postalcode):
     except Exception as e:
         print(f"Error fetching preschool location data: {e}")
         return []
+    
+# -------- Childcare Fetching Function --------
+
+def findchildcare(postalcode):
+    """
+    Fetch childcare services from Singapore government API.
+    Returns list of dicts with name, address, postal_code, lat/lon.
+    Safely handles missing/null fields.
+    """
+    dataset_id = "d_5d668e3f544335f8028f546827b773b4"
+    postal_code = str(postalcode)
+
+    try:
+        # Poll for download URL
+        url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+        response = requests.get(url, timeout=10)
+        json_data = response.json()
+
+        if json_data['code'] != 0 or 'data' not in json_data or not json_data['data'].get('url'):
+            print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
+            return []
+
+        # Fetch actual GeoJSON data
+        download_url = json_data['data']['url']
+        response = requests.get(download_url, timeout=10)
+        geojson_data = json.loads(response.text)
+
+        childcare = []
+        for feature in geojson_data.get('features', []):
+            props = feature.get('properties', {})
+            coords = feature.get('geometry', {}).get('coordinates', [None, None])
+
+            # Parse attributes from HTML table in Description
+            soup = BeautifulSoup(props.get('Description', ''), 'html.parser')
+            rows = soup.find_all('tr')
+            data = {}
+            for row in rows[1:]:  # skip header
+                cells = row.find_all(['th', 'td'])
+                if len(cells) == 2:
+                    key = cells[0].get_text(strip=True)
+                    value = cells[1].get_text(strip=True)
+                    data[key] = value if value else None
+
+            # Safely build address using only non-empty fields
+            address_parts = [
+                data.get('ADDRESSBLOCKHOUSENUMBER'),
+                data.get('ADDRESSSTREETNAME'),
+                data.get('ADDRESSBUILDINGNAME')
+            ]
+            address = ' '.join([str(p) for p in address_parts if p]) if any(address_parts) else None
+
+            entry = {
+                "name": data.get("NAME"),
+                "address": address or data.get("ADDRESSSTREETNAME"),
+                "postal_code": data.get("ADDRESSPOSTALCODE"),
+                "latitude": coords[1] if len(coords) > 1 else None,
+                "longitude": coords[0] if coords else None,
+                "last_update": data.get("FMEL_UPD_D"),
+                "description": data.get("DESCRIPTION"),
+            }
+
+            childcare.append(entry)
+
+        return childcare
+
+    except Exception as e:
+        print(f"Error fetching childcare data: {e}")
+        return []
+
 
 
 
