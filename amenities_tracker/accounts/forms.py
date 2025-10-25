@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser
+from .models import RoommateProfile, GENDER_CHOICES, RACE_CHOICES
 
 
 class OTPForm(forms.Form):
