@@ -364,7 +364,7 @@ def search_amenities(request):
     postal_code = request.GET.get("q")
     amenities = []
     token = get_onemap_token()
-    categories = ["schools", "eldercare", "clinic", "hawker", "mrt"]
+    categories = ["schools", "eldercare","mrt", "library","clinic", "hawker"]
 
     center_lat, center_lon = None, None
 
@@ -469,6 +469,30 @@ def search_amenities(request):
                                 "longitude": amenity_lon,
                                 "distance": round(dist, 2),
                             })
+            if category == "library":
+                records = findlibrary(postal_code)
+                
+                # Coordinates already included - no OneMap lookup needed!
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    
+                    if amenity_lat and amenity_lon:
+                        # Calculate distance from search center
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        
+                        # Only include if within 1.5 km radius
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),  # e.g., "Serangoon Public Library"
+                                "type": "Library",
+                                "address": record.get("address"),
+                                "postal_code": record.get("postal_code"),
+                                "building_name": record.get("building_name"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "distance": round(dist, 2),
+                            })
 
         context = {
             "amenities": amenities,
@@ -477,8 +501,9 @@ def search_amenities(request):
         }
     return render(request, "accounts/amenities_results.html", context)
                     
+# -------- Amenity Fetching Functions --------
 
-
+# -------- School Fetching Function --------
 def findschool(postalcode):
     dataset_id = "d_688b934f82c1059ed0a6993d2a829089" # Schools dataset
     postal_code = str(postalcode)
@@ -506,7 +531,7 @@ def findschool(postalcode):
       print(f"fetched, {len(records)} records for town {town}")
       return records
     return []
-
+# -------- Eldercare Fetching Function --------
 def findeldercare(postalcode):
     """
     Fetch eldercare facilities from Singapore government API
@@ -552,6 +577,7 @@ def findeldercare(postalcode):
     
     return eldercare_facilities
 
+# -------- MRT Fetching Function --------
 def findmrt(postalcode):
     """
     Fetch MRT station exits from Singapore government API
@@ -611,9 +637,88 @@ def findmrt(postalcode):
     except Exception as e:
         print(f"Error fetching MRT data: {e}")
         return []
+    
+# -------- Library Fetching Function --------
+def findlibrary(postalcode):
+    """
+    Fetch public libraries from Singapore government API (NLB dataset)
+    Returns list of dicts with name, address, postal_code, latitude, longitude
+    """
+    dataset_id = "d_27b8dae65d9ca1539e14d09578b17cbf"  # NLB Public Libraries
+    postal_code = str(postalcode)
+    
+    try:
+        # Step 1: Poll for download URL
+        url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+        response = requests.get(url, timeout=10)
+        json_data = response.json()
+        
+        if json_data['code'] != 0:
+            print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
+            return []
+        
+        # Step 2: Get actual data from the download URL
+        download_url = json_data['data']['url']
+        response = requests.get(download_url, timeout=10)
+        geojson_data = json.loads(response.text)
+        
+        # Step 3: Parse GeoJSON features
+        libraries = []
+        
+        for feature in geojson_data['features']:
+            # Parse HTML description to extract attributes
+            soup = BeautifulSoup(feature['properties']['Description'], 'html.parser')
+            rows = soup.find_all('tr')
+            
+            # Extract data from HTML table
+            data = {}
+            for row in rows[1:]:  # Skip header row
+                cells = row.find_all(['th', 'td'])
+                if len(cells) == 2:
+                    key = cells[0].get_text(strip=True)
+                    value = cells[1].get_text(strip=True)
+                    data[key] = value if value else None
+            
+            # Get coordinates
+            coords = feature['geometry']['coordinates']
+            
+            # Build full address
+            address_parts = []
+            if data.get('ADDRESSBLOCKHOUSENUMBER'):
+                address_parts.append(data.get('ADDRESSBLOCKHOUSENUMBER'))
+            if data.get('ADDRESSSTREETNAME'):
+                address_parts.append(data.get('ADDRESSSTREETNAME'))
+            if data.get('ADDRESSBUILDINGNAME'):
+                address_parts.append(data.get('ADDRESSBUILDINGNAME'))
+            
+            full_address = ' '.join(address_parts) if address_parts else None
+            
+            # Create library record
+            library = {
+                "name": data.get('NAME'),
+                "address": full_address,
+                "postal_code": data.get('ADDRESSPOSTALCODE'),
+                "building_name": data.get('ADDRESSBUILDINGNAME'),
+                "floor_number": data.get('ADDRESSFLOORNUMBER'),
+                "unit_number": data.get('ADDRESSUNITNUMBER'),
+                "description": data.get('DESCRIPTION'),  # Library code (e.g., SRPL, OCPL)
+                "hyperlink": data.get('HYPERLINK'),
+                "photo_url": data.get('PHOTOURL'),
+                "latitude": coords[1],  # GeoJSON is [lon, lat]
+                "longitude": coords[0],
+            }
+            
+            libraries.append(library)
+        
+        return libraries
+        
+    except Exception as e:
+        print(f"Error fetching library data: {e}")
+        return []
 
 
 
+#  home2 view for testing
 def home2(request):
     if request.method == 'POST':
         print(request.POST)  # Debug: see what's submitted
