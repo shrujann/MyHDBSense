@@ -364,7 +364,7 @@ def search_amenities(request):
     postal_code = request.GET.get("q")
     amenities = []
     token = get_onemap_token()
-    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker"]
+    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker", "tourism"]
 
     center_lat, center_lon = None, None
 
@@ -540,6 +540,29 @@ def search_amenities(request):
                                 "longitude": amenity_lon,
                                 "distance": round(dist, 2),
                             })
+            
+            if category == "tourism":
+                records = findtourism(postal_code)
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    # Calculate distance only if both coords exist
+                    if amenity_lat and amenity_lon and lat and lon:
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),
+                                "type": "Tourism",
+                                "address": record.get("address"),
+                                "postal_code": record.get("postal_code"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "overview": record.get("overview"),
+                                "external_link": record.get("external_link"),
+                                "image_url": record.get("image_url"),
+                                "opening_hours": record.get("opening_hours"),
+                                "distance": round(dist, 2),
+                            })
 
         context = {
             "amenities": amenities,
@@ -548,6 +571,8 @@ def search_amenities(request):
         }
     return render(request, "accounts/amenities_results.html", context)
                     
+
+
 # -------- Amenity Fetching Functions --------
 
 # -------- School Fetching Function --------
@@ -911,6 +936,82 @@ def findhawker(postalcode):
         print(f"Error fetching hawker centre data: {e}")
         return []
 
+# -------- Tourism POI Fetching Function --------
+
+def findtourism(postalcode):
+    """
+    Fetch tourism POIs from Singapore government API.
+    Returns list of dicts with name, overview, image, address, lat/lon, opening hours, etc.
+    Safely handles missing/null fields.
+    """
+    dataset_id = "d_0f2f47515425404e6c9d2a040dd87354"
+    postal_code = str(postalcode)
+
+    try:
+        # Poll for download URL
+        url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+        response = requests.get(url, timeout=10)
+        json_data = response.json()
+
+        if json_data['code'] != 0 or 'data' not in json_data or not json_data['data'].get('url'):
+            print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
+            return []
+
+        # Fetch actual data
+        download_url = json_data['data']['url']
+        response = requests.get(download_url, timeout=10)
+        geojson_data = json.loads(response.text)
+
+        spots = []
+        for feature in geojson_data.get('features', []):
+            props = feature.get('properties', {})
+            coords = feature.get('geometry', {}).get('coordinates', [None, None])
+
+            # Parse attributes from HTML table in Description
+            soup = BeautifulSoup(props.get('Description', ''), 'html.parser')
+            rows = soup.find_all('tr')
+            data = {}
+            for row in rows[1:]:  # skip header
+                cells = row.find_all(['th', 'td'])
+                if len(cells) == 2:
+                    key = cells[0].get_text(strip=True)
+                    value = cells[1].get_text(strip=True)
+                    data[key] = value if value else None
+
+            # Get lat/lon: prefer from table, fallback to geometry
+            try:
+                lat = float(data.get('LATITUDE', coords[1]))
+            except (TypeError, ValueError):
+                lat = None
+            try:
+                lon = float(data.get('LONGTITUDE', coords[0]))
+            except (TypeError, ValueError):
+                lon = None
+
+            spot = {
+                "name": data.get("PAGETITLE"),
+                "address": data.get("ADDRESS"),
+                "postal_code": data.get("POSTALCODE"),
+                "latitude": lat,
+                "longitude": lon,
+                "overview": data.get("OVERVIEW"),
+                "external_link": data.get("EXTERNAL_LINK"),
+                "meta_description": data.get("META_DESCRIPTION"),
+                "opening_hours": data.get("OPENING_HOURS"),
+                "image_url": data.get("IMAGE_PATH"),
+                "image_alt": data.get("IMAGE_ALT_TEXT"),
+                "photocredits": data.get("PHOTOCREDITS"),
+                "url_path": data.get("URL_PATH"),
+                "lastmodified": data.get("LASTMODIFIED"),
+            }
+
+            spots.append(spot)
+
+        return spots
+
+    except Exception as e:
+        print(f"Error fetching tourism POI data: {e}")
+        return []
 
 
 
