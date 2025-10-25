@@ -1,7 +1,13 @@
+from django.db.models import Q
+from .models import RoommateProfile, ContactAttempt, CustomUser
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django_otp.plugins.otp_email.models import EmailDevice
-from .forms import OTPForm, CustomUserCreationForm, LoginForm
+from .forms import RoommateProfileForm, SharingRequestForm, ContactMessageForm, OTPForm, CustomUserCreationForm, LoginForm
 from .models import CustomUser
 import requests
 import pandas as pd
@@ -358,6 +364,82 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     distance = R * c
     return distance
+
+@login_required
+def roommate_profile_edit(request):
+    profile, _ = RoommateProfile.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        form = RoommateProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            p = form.save(commit=False)
+            p.preferred_neighbourhoods = form.cleaned_data.get("preferred_neighbourhoods", [])
+            p.save()
+            messages.success(request, "Roommate profile updated.")
+            return redirect("roommate_profile_edit")
+    else:
+        initial_csv = ", ".join(profile.preferred_neighbourhoods or [])
+        form = RoommateProfileForm(instance=profile, initial={"neighbourhoods_csv": initial_csv})
+    return render(request, "accounts/roommate_profile_edit.html", {"form": form})
+
+@login_required
+def sharing_request(request):
+    results = None
+    if request.method == "POST":
+        form = SharingRequestForm(request.POST)
+        if form.is_valid():
+            qs = RoommateProfile.objects.filter(is_looking=True).exclude(user=request.user)
+
+            min_age = form.cleaned_data.get("min_age")
+            max_age = form.cleaned_data.get("max_age")
+            gender = form.cleaned_data.get("gender") or ""
+            race = form.cleaned_data.get("race") or "-"
+            max_budget = form.cleaned_data.get("max_budget")
+            n_csv = form.cleaned_data.get("neighbourhoods_csv") or ""
+            filter_neigh = {s.strip().lower() for s in n_csv.split(",") if s.strip()}
+
+            if min_age: qs = qs.filter(age__gte=min_age)
+            if max_age: qs = qs.filter(age__lte=max_age)
+            if gender:  qs = qs.filter(gender=gender)
+            if race and race != "-": qs = qs.filter(race=race)
+            if max_budget: qs = qs.filter(Q(max_budget__isnull=True) | Q(max_budget__lte=max_budget))
+
+            profiles = list(qs.select_related("user"))
+            if filter_neigh:
+                def overlaps(p):
+                    prefs = [s.lower() for s in (p.preferred_neighbourhoods or [])]
+                    return bool(set(prefs).intersection(filter_neigh))
+                profiles = [p for p in profiles if overlaps(p)]
+
+            results = profiles
+            if not results:
+                messages.info(request, "No suitable roommate found based on your filters.")
+    else:
+        form = SharingRequestForm()
+
+    return render(request, "accounts/sharing_request.html", {"form": form, "results": results})
+
+@login_required
+def contact_roommate(request, user_id):
+    User = get_user_model()
+    recipient = get_object_or_404(User, id=user_id)
+    if request.method == "POST":
+        form = ContactMessageForm(request.POST)
+        if form.is_valid():
+            msg = form.cleaned_data["message"]
+            ContactAttempt.objects.create(sender=request.user, recipient=recipient, message=msg)
+            send_mail(
+                subject=f"MyHDBSense: {request.user.username} wants to connect",
+                message=msg,
+                from_email=None,
+                recipient_list=[recipient.email],
+                fail_silently=False,
+            )
+            messages.success(request, "Message sent. Check server console for email (dev mode).")
+            return redirect("sharing_request")
+    else:
+        form = ContactMessageForm()
+    return render(request, "accounts/contact_roommate.html", {"form": form, "recipient": recipient})
+
 
 # ------ Amneities Tracker Views ------
 def search_amenities(request):
