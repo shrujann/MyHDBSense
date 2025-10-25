@@ -9,6 +9,7 @@ from math import radians, sin, cos, sqrt, atan2
 import concurrent.futures
 import json
 from django.conf import settings
+from bs4 import BeautifulSoup
 
 # registeration view
 def register(request):
@@ -426,6 +427,26 @@ def search_amenities(request):
                                 "distance": round(dist, 2),
                             })
 
+            if category == "eldercare":
+                records = findeldercare(postal_code)
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    
+                    if amenity_lat and amenity_lon:
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),
+                                "type": "Eldercare",
+                                "address": record.get("address"),
+                                "postal_code": record.get("postal_code"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "distance": round(dist, 2),
+                            })
+
         context = {
             "amenities": amenities,
             "center_lat": center_lat if center_lat else 1.3521,
@@ -440,7 +461,7 @@ def findschool(postalcode):
     postal_code = str(postalcode)
     town = get_hdb_town_from_postal(postal_code)
 
-    postal_code2_str = "50" + "0000"
+    postal_code2_str = "50" + "0000" # hard coded - change later to search neighbouring towns
     town2 = get_hdb_town_from_postal(postal_code2_str)
 
     filters = {"dgp_code": [town, town2]}
@@ -462,6 +483,51 @@ def findschool(postalcode):
       print(f"fetched, {len(records)} records for town {town}")
       return records
     return []
+
+def findeldercare(postalcode):
+    """
+    Fetch eldercare facilities from Singapore government API
+    Returns list of dicts with name, address, postal_code, latitude, longitude
+    """
+    dataset_id = "d_f0fd1b3643ed8bd34bd403dedd7c1533"
+    
+    # Poll for download URL
+    url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+    response = requests.get(url, timeout=10)
+    json_data = response.json()
+    
+    # Get actual GeoJSON data
+    download_url = json_data['data']['url']
+    response = requests.get(download_url, timeout=10)
+    geojson_data = json.loads(response.text)
+    
+    # Parse each feature
+    eldercare_facilities = []
+    for feature in geojson_data['features']:
+        soup = BeautifulSoup(feature['properties']['Description'], 'html.parser')
+        rows = soup.find_all('tr')
+        
+        # Extract data from HTML table
+        data = {}
+        for row in rows[1:]:
+            cells = row.find_all(['th', 'td'])
+            if len(cells) == 2:
+                key = cells[0].get_text(strip=True)
+                value = cells[1].get_text(strip=True)
+                data[key] = value if value else None
+        
+        coords = feature['geometry']['coordinates']
+        
+        facility = {
+            "name": data.get('NAME'),
+            "address": data.get('ADDRESSSTREETNAME'),
+            "postal_code": data.get('ADDRESSPOSTALCODE'),
+            "latitude": coords[1],  # GeoJSON is [lon, lat]
+            "longitude": coords[0],
+        }
+        eldercare_facilities.append(facility)
+    
+    return eldercare_facilities
 
 def home2(request):
     if request.method == 'POST':
