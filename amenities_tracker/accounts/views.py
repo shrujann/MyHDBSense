@@ -364,7 +364,7 @@ def search_amenities(request):
     postal_code = request.GET.get("q")
     amenities = []
     token = get_onemap_token()
-    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker", "tourism", "preschool", "childcare", "gym", "sportsg"]
+    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker", "tourism", "preschool", "childcare", "gym", "sportsg", "parks", "marketcentre", "supermarket"]
 
     center_lat, center_lon = None, None
 
@@ -644,6 +644,69 @@ def search_amenities(request):
                                 "distance": round(dist, 2),
                                 "facility_type": record.get("facility_type"),
                             })
+            
+            if category == "parks":
+                records = findpark(postal_code)
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    if amenity_lat and amenity_lon and lat and lon:
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),
+                                "type": "Park",
+                                "park_id": record.get("id"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "distance": round(dist, 2),
+                            })
+
+            if category == "marketcentre":
+                records = findmarketcentre(postal_code)
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    if amenity_lat and amenity_lon and lat and lon:
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),
+                                "type": "Market Centre",
+                                "address": record.get("location_centre"),
+                                "postal_code": record.get("postal_code"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "total_stalls": record.get("total_stalls"),
+                                "market_stalls": record.get("market_stalls"),
+                                "cf_stalls": record.get("cf_stalls"),
+                                "centre_type": record.get("type"),
+                                "owner": record.get("owner"),
+                                "distance": round(dist, 2),
+                            })
+
+            if category == "supermarket":
+                records = findsupermarket(postal_code)
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    if amenity_lat and amenity_lon and lat and lon:
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),
+                                "type": "Supermarket",
+                                "address": record.get("address"),
+                                "postal_code": record.get("postal_code"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "license_no": record.get("license_no"),
+                                "last_update": record.get("last_update"),
+                                "distance": round(dist, 2),
+                            })
+
+
+
 
 
         context = {
@@ -1377,6 +1440,173 @@ def findsportsg(postalcode):
 
     except Exception as e:
         print(f"Error fetching sportsG data: {e}")
+        return []
+
+# -------- National Parks/Nature Reserves Fetching Function --------
+
+def findpark(postalcode):
+    """
+    Fetch national parks/nature reserves from Singapore government API.
+    Returns list of dicts with park name, id, lat/lon.
+    """
+    dataset_id = "d_0542d48f0991541706b58059381a6eca"
+    postal_code = str(postalcode)
+
+    try:
+        # Poll for download URL
+        url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+        response = requests.get(url, timeout=10)
+        json_data = response.json()
+
+        if json_data['code'] != 0 or 'data' not in json_data or not json_data['data'].get('url'):
+            print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
+            return []
+
+        download_url = json_data['data']['url']
+        response = requests.get(download_url, timeout=10)
+        geojson_data = json.loads(response.text)
+
+        parks = []
+        for feature in geojson_data.get('features', []):
+            props = feature.get('properties', {})
+            coords = feature.get('geometry', {}).get('coordinates', [None, None])
+            
+            park = {
+                "name": props.get("NAME"),
+                "latitude": coords[1] if len(coords) > 1 else None,
+                "longitude": coords[0] if coords else None,
+                "id": props.get("OBJECTID"),
+            }
+
+            parks.append(park)
+
+        return parks
+
+    except Exception as e:
+        print(f"Error fetching park data: {e}")
+        return []
+
+# -------- Market Centre Fetching Function --------
+
+def findmarketcentre(postalcode):
+    """
+    Fetch market centres from Singapore government API.
+    Returns list of dicts with centre name, address, postal_code, coordinates, stall counts, etc.
+    """
+    dataset_id = "d_a57a245b3cf3ec76ad36d55393a16e97"
+    postal_code = str(postalcode)
+
+    try:
+        # Poll for download URL
+        url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+        response = requests.get(url, timeout=10)
+        json_data = response.json()
+
+        if json_data['code'] != 0 or 'data' not in json_data or not json_data['data'].get('url'):
+            print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
+            return []
+
+        download_url = json_data['data']['url']
+        response = requests.get(download_url, timeout=10)
+        geojson_data = json.loads(response.text)
+
+        centres = []
+        for feature in geojson_data.get('features', []):
+            props = feature.get('properties', {})
+            coords = feature.get('geometry', {}).get('coordinates', [None, None])
+
+            # Parse data from Description HTML
+            soup = BeautifulSoup(props.get('Description', ''), 'html.parser')
+            rows = soup.find_all('tr')
+            data = {}
+            for row in rows[1:]:
+                cells = row.find_all(['th', 'td'])
+                if len(cells) == 2:
+                    key = cells[0].get_text(strip=True)
+                    value = cells[1].get_text(strip=True)
+                    data[key] = value if value else None
+
+            record = {
+                "name": data.get("NAME_OF_CENTRE"),
+                "location_centre": data.get("LOCATION_CENTRE"),
+                "total_stalls": data.get("TOTAL_STALLS"),
+                "market_stalls": data.get("MP_STALLS"),
+                "cf_stalls": data.get("CF_STALLS"),
+                "type": data.get("TYPE"),
+                "owner": data.get("OWNER"),
+                "postal_code": data.get("POSTAL_CODE"),
+                "latitude": coords[1] if len(coords) > 1 else None,
+                "longitude": coords[0] if coords else None,
+            }
+
+            centres.append(record)
+
+        return centres
+
+    except Exception as e:
+        print(f"Error fetching market centre data: {e}")
+        return []
+
+# -------- Supermarket Fetching Function --------
+
+def findsupermarket(postalcode):
+    """
+    Fetch supermarkets from Singapore government API.
+    Returns list of dicts with name, address, postal_code, coordinates, and license info.
+    """
+    dataset_id = "d_cac2c32f01960a3ad7202a99c27268a0"
+    postal_code = str(postalcode)
+
+    try:
+        # Poll for download URL
+        url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+        response = requests.get(url, timeout=10)
+        json_data = response.json()
+
+        if json_data['code'] != 0 or 'data' not in json_data or not json_data['data'].get('url'):
+            print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
+            return []
+
+        download_url = json_data['data']['url']
+        response = requests.get(download_url, timeout=10)
+        geojson_data = json.loads(response.text)
+
+        markets = []
+        for feature in geojson_data.get('features', []):
+            props = feature.get('properties', {})
+            coords = feature.get('geometry', {}).get('coordinates', [None, None])
+
+            # Parse data from Description HTML
+            soup = BeautifulSoup(props.get('Description', ''), 'html.parser')
+            rows = soup.find_all('tr')
+            data = {}
+            for row in rows[1:]:
+                cells = row.find_all(['th', 'td'])
+                if len(cells) == 2:
+                    key = cells[0].get_text(strip=True)
+                    value = cells[1].get_text(strip=True)
+                    data[key] = value if value else None
+
+            # Build address from parts
+            address_parts = [data.get("BLK_HOUSE"), data.get("STR_NAME"), data.get("UNIT_NO")]
+            address = ' '.join(str(x) for x in address_parts if x) if any(address_parts) else None
+
+            record = {
+                "name": data.get("LIC_NAME"),
+                "address": address,
+                "postal_code": data.get("POSTCODE"),
+                "latitude": coords[1] if len(coords) > 1 else None,
+                "longitude": coords[0] if coords else None,
+                "license_no": data.get("LIC_NO"),
+                "last_update": data.get("FMEL_UPD_D"),
+            }
+
+            markets.append(record)
+
+        return markets
+
+    except Exception as e:
+        print(f"Error fetching supermarket data: {e}")
         return []
 
 
