@@ -364,7 +364,7 @@ def search_amenities(request):
     postal_code = request.GET.get("q")
     amenities = []
     token = get_onemap_token()
-    categories = ["schools", "eldercare","mrt", "library","clinic", "hawker"]
+    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker"]
 
     center_lat, center_lon = None, None
 
@@ -512,6 +512,30 @@ def search_amenities(request):
                                 "postal_code": record.get("postal_code"),
                                 "phone": record.get("phone"),
                                 "building_name": record.get("building_name"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "distance": round(dist, 2),
+                            })
+            if category == "hawker":
+                records = findhawker(postal_code)
+    
+                # Coordinates already included - no OneMap lookup needed!
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    
+                    if amenity_lat and amenity_lon:
+                        # Calculate distance from search center
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        
+                        # Only include if within 1.5 km radius
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),  # e.g., "Tekka Centre"
+                                "type": "Hawker Centre",
+                                "address": record.get("address"),
+                                "postal_code": record.get("postal_code"),
+                                "description": record.get("description"),
                                 "latitude": amenity_lat,
                                 "longitude": amenity_lon,
                                 "distance": round(dist, 2),
@@ -820,6 +844,74 @@ def findchas(postalcode):
     except Exception as e:
         print(f"Error fetching CHAS clinic data: {e}")
         return []
+
+# - ------- Hawker Centre Fetching Function --------
+def findhawker(postalcode):
+    """
+    Fetch hawker centres from Singapore government API (NEA dataset)
+    Returns list of dicts with hawker name, address, postal_code, latitude, longitude
+    Safely handles missing/null fields.
+    """
+    dataset_id = "d_4a086da0a5553be1d89383cd90d07ecd"
+    postal_code = str(postalcode)
+
+    try:
+        # Poll for download URL
+        url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+        response = requests.get(url, timeout=10)
+        json_data = response.json()
+
+        if json_data['code'] != 0 or 'data' not in json_data or not json_data['data'].get('url'):
+            print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
+            return []
+
+        # Fetch actual data
+        download_url = json_data['data']['url']
+        response = requests.get(download_url, timeout=10)
+        geojson_data = json.loads(response.text)
+
+        hawker_centres = []
+
+        for feature in geojson_data.get('features', []):  # Default to empty list if missing
+            props = feature.get('properties', {})
+            coords = feature.get('geometry', {}).get('coordinates', [None, None])
+
+            # Only take non-None address parts
+            address_parts = [
+                props.get('ADDRESSBLOCKHOUSENUMBER'),
+                props.get('ADDRESSSTREETNAME'),
+                props.get('ADDRESSBUILDINGNAME')
+            ]
+            full_address = ' '.join([str(part) for part in address_parts if part]) if address_parts else None
+
+            hawker = {
+                "name": props.get('NAME'),
+                "description": props.get('DESCRIPTION'),
+                "address": full_address,
+                "postal_code": props.get('ADDRESSPOSTALCODE'),
+                "building_name": props.get('ADDRESSBUILDINGNAME'),
+                "street_name": props.get('ADDRESSSTREETNAME'),
+                "block_house_no": props.get('ADDRESSBLOCKHOUSENUMBER'),
+                "floor_number": props.get('ADDRESSFLOORNUMBER'),
+                "unit_number": props.get('ADDRESSUNITNUMBER'),
+                "hyperlink": props.get('HYPERLINK'),
+                "photo_url": props.get('PHOTOURL'),
+                "status": props.get('STATUS'),
+                "awarded_date": props.get('AWARDED_DATE'),
+                "implementation_date": props.get('IMPLEMENTATION_DATE'),
+                "latitude": coords[1] if len(coords) > 1 else None,
+                "longitude": coords[0] if coords else None,
+            }
+
+            hawker_centres.append(hawker)
+
+        return hawker_centres
+
+    except Exception as e:
+        print(f"Error fetching hawker centre data: {e}")
+        return []
+
+
 
 
 
