@@ -364,7 +364,7 @@ def search_amenities(request):
     postal_code = request.GET.get("q")
     amenities = []
     token = get_onemap_token()
-    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker", "tourism"]
+    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker", "tourism", "preschool"]
 
     center_lat, center_lon = None, None
 
@@ -561,6 +561,24 @@ def search_amenities(request):
                                 "external_link": record.get("external_link"),
                                 "image_url": record.get("image_url"),
                                 "opening_hours": record.get("opening_hours"),
+                                "distance": round(dist, 2),
+                            })
+
+            if category == "preschool":
+                records = findpreschool(postal_code)
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    if amenity_lat and amenity_lon and lat and lon:
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),
+                                "type": "Preschool",
+                                "code": record.get("code"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "last_update": record.get("last_update"),
                                 "distance": round(dist, 2),
                             })
 
@@ -1013,6 +1031,62 @@ def findtourism(postalcode):
         print(f"Error fetching tourism POI data: {e}")
         return []
 
+# -------- Pre-school Fetching Function --------
+
+def findpreschool(postalcode):
+    """
+    Fetch pre-school locations from Singapore government API.
+    Returns list of dicts with name, code, lat/lon, and updated date.
+    """
+    dataset_id = "d_61eefab99958fd70e6aab17320a71f1c"
+    postal_code = str(postalcode)
+
+    try:
+        # Poll for download URL
+        url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+        response = requests.get(url, timeout=10)
+        json_data = response.json()
+
+        if json_data['code'] != 0 or 'data' not in json_data or not json_data['data'].get('url'):
+            print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
+            return []
+
+        # Fetch actual data
+        download_url = json_data['data']['url']
+        response = requests.get(download_url, timeout=10)
+        geojson_data = json.loads(response.text)
+
+        preschools = []
+        for feature in geojson_data.get('features', []):
+            props = feature.get('properties', {})
+            coords = feature.get('geometry', {}).get('coordinates', [None, None])
+
+            # Parse from HTML table in Description
+            soup = BeautifulSoup(props.get('Description', ''), 'html.parser')
+            rows = soup.find_all('tr')
+            data = {}
+            for row in rows[1:]:  # skip header
+                cells = row.find_all(['th', 'td'])
+                if len(cells) == 2:
+                    key = cells[0].get_text(strip=True)
+                    value = cells[1].get_text(strip=True)
+                    data[key] = value if value else None
+
+            preschool = {
+                "name": data.get("CENTRE_NAME"),
+                "code": data.get("CENTRE_CODE"),
+                "latitude": coords[1] if len(coords) > 1 else None,
+                "longitude": coords[0] if coords else None,
+                "last_update": data.get("FMEL_UPD_D"),
+            }
+
+            preschools.append(preschool)
+
+        return preschools
+
+    except Exception as e:
+        print(f"Error fetching preschool location data: {e}")
+        return []
 
 
 
