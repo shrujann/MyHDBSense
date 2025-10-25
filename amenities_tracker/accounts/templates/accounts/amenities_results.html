@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+    {% load static %}
+<head>
+    <meta charset="UTF-8">
+    <title>Nearby Amenities</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        th { background-color: #f2f2f2; }
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Nearby Amenities (within 1.5 km)</h2>
+
+{% if amenities %}
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Address</th>
+            <th>Postal Code</th>
+            <th>Distance (km)</th>
+        </tr>
+        {% for amenity in amenities %}
+        <tr>
+            <td>{{ amenity.name }}</td>
+            <td>{{ amenity.type }}</td>
+            <td>{{ amenity.address }}</td>
+            <td>{{ amenity.postal_code }}</td>
+            <td>{{ amenity.distance }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <!-- Map container -->
+    <div id="map" style="height: 500px;"></div>
+
+    <!-- Hidden JSON data -->
+    {{ amenities|json_script:"amenities-data" }}
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Get center coordinates from Django
+        var center = [parseFloat("{{ center_lat }}"), parseFloat("{{ center_lng }}")];
+
+        // Parse amenities JSON from the hidden script
+        var amenities = JSON.parse(document.getElementById("amenities-data").textContent);
+
+        // Initialize map
+        var map = L.map("map").setView(center, 14);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap contributors"
+        }).addTo(map);
+
+        // Draw a 1.5 km radius circle around center
+        var circle = L.circle(center, {
+            radius: 1500,  // 1500 meters = 1.5 km
+            color: "blue",
+            fillColor: "#cce5ff",
+            fillOpacity: 0.2
+        }).addTo(map);
+
+        // Add center marker with custom icon
+        var centerIcon = L.icon({
+            iconUrl: "{% static 'accounts/icons/home.svg' %}",
+            iconSize: [35, 35],
+            iconAnchor: [17, 35],
+            popupAnchor: [0, -35]
+        });
+        L.marker(center, {icon: centerIcon})
+          .addTo(map)
+          .bindPopup("<b>Your Location</b>");
+
+        // Define custom icons for different amenity types
+        var schoolIcon = L.icon({
+            iconUrl: "{% static 'accounts/icons/school.svg' %}",
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -28]
+        });
+
+        var eldercareIcon = L.icon({
+            iconUrl: "{% static 'accounts/icons/eldercare.svg' %}",
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -28]
+        });
+
+        var clinicIcon = L.icon({
+            iconUrl: "{% static 'accounts/icons/clinic.svg' %}",
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -28]
+        });
+
+        var hawkerIcon = L.icon({
+            iconUrl: "{% static 'accounts/icons/hawker.svg' %}",
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -28]
+        });
+
+        // Add markers with custom icons based on type
+        amenities.forEach(a => {
+            if (a.latitude && a.longitude) {
+                var icon;
+                switch(a.type.toLowerCase()) {
+                    case 'school':
+                        icon = schoolIcon;
+                        break;
+                    case 'eldercare':
+                        icon = eldercareIcon;
+                        break;
+                    case 'chas clinic':
+                    case 'clinic':
+                        icon = clinicIcon;
+                        break;
+                    case 'hawker centre':
+                        icon = hawkerIcon;
+                        break;
+                    default:
+                        icon = schoolIcon; // fallback
+                }
+                
+                L.marker([a.latitude, a.longitude], {icon: icon})
+                  .addTo(map)
+                  .bindPopup(
+                    `<b>${a.name}</b><br>Type: ${a.type}<br>Address: ${a.address}<br>Distance: ${a.distance} km`
+                  );
+            }
+        });
+    </script>
+
+    <!-- Debug -->
+    <p>
+        Center coordinates: Latitude = {{ center_lat }}, Longitude = {{ center_lng }}
+    </p>
+
+{% else %}
+    <p>No amenities found within 1.5 km of that postal code.</p>
+{% endif %}
+
+</body>
+</html>

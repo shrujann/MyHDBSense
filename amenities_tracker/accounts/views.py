@@ -363,7 +363,9 @@ def search_amenities(request):
     postal_code = request.GET.get("q")
     amenities = []
     token = get_onemap_token()
-    # categories = 
+    categories = ["schools", "eldercare", "chas clinics", "hawker centres",]
+
+    center_lat, center_lon = None, None
 
     if postal_code:
         # Step 1: Get postal code coordinates from OneMap
@@ -382,16 +384,93 @@ def search_amenities(request):
         except Exception as e:
             print("Error fetching postal code:", e)
             lat, lon = None, None
+    
+    center_lat, center_lon = lat, lon
             
-        # Step 2: Define bounding box around the coordinates
-        boundingbox = get_bounding_box(lat, lon, 1.0) if lat and lon else None
+       # Step 2: Fetch amenities
+    if lat and lon:
+        for category in categories:
+            if category == "schools":
+                records = findschool(postal_code)
+                records_length = len(records)
 
-        # Step 3: Fetch amenities within bounding box
-        if lat and lon and boundingbox:
-            south_lat = min(boundingbox, key=lambda x: x[0])[0]
-            north_lat = max(boundingbox, key=lambda x: x[0])[0]
-            west_lng = min(boundingbox, key=lambda x: x[1])[1]
-            east_lng = max(boundingbox, key=lambda x: x[1])[1]
+                for i in range(records_length):
+                    amenity_postal_code = records[i].get("postal_code")
+                    try:
+                        url = (
+                            f"https://www.onemap.gov.sg/api/common/elastic/search"
+                            f"?searchVal={amenity_postal_code}&returnGeom=Y&getAddrDetails=Y&pageNum=1"
+                        )
+                        headers = {"Authorization": token}
+                        resp = requests.get(url, headers=headers, timeout=10).json()
+                        if resp.get("found", 0) > 0:
+                            amenity_lat = float(resp["results"][0]["LATITUDE"])
+                            amenity_lon = float(resp["results"][0]["LONGITUDE"])
+                            print(amenity_lat, amenity_lon)
+                        else:
+                            amenity_lat, amenity_lon = None, None
+                    except Exception as e:
+                        print("Error fetching postal code:", e)
+                        amenity_lat, amenity_lon = None, None
+                
+                    if amenity_lat and amenity_lon:
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": records[i].get("school_name"),
+                                "type": "School",
+                                "address": records[i].get("address"),
+                                "postal_code": amenity_postal_code,
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "distance": round(dist, 2),
+                            })
 
+        context = {
+            "amenities": amenities,
+            "center_lat": center_lat if center_lat else 1.3521,
+            "center_lng": center_lon if center_lon else 103.8198,
+        }
+    return render(request, "accounts/amenities_results.html", context)
+                    
+
+
+def findschool(postalcode):
+    dataset_id = "d_688b934f82c1059ed0a6993d2a829089" # Schools dataset
+    postal_code = str(postalcode)
+    town = get_hdb_town_from_postal(postal_code)
+
+    postal_code2_str = "50" + "0000"
+    town2 = get_hdb_town_from_postal(postal_code2_str)
+
+    filters = {"dgp_code": [town, town2]}
+    #filters = {"dgp_code": town}
+    print(filters)
+    params = {
+        "resource_id": dataset_id,
+        "limit": 1000,
+        "filters": json.dumps(filters)
+
+    }
+    url = "https://data.gov.sg/api/action/datastore_search"
+    print("URL:", requests.Request("GET", url, params=params).prepare().url)
+
+    data = requests.get(url, params=params).json()
+    if data.get("success"):
+      records = data["result"]["records"]
+      print("Fetched records:", records)
+      print(f"fetched, {len(records)} records for town {town}")
+      return records
+    return []
+
+def home2(request):
+    if request.method == 'POST':
+        print(request.POST)  # Debug: see what's submitted
+        
+    return render(request, 'accounts/home2.html')
+
+
+
+        
         
             
