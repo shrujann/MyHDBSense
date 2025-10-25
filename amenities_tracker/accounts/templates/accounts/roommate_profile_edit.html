@@ -1,0 +1,10 @@
+<h2>Roommate Profile</h2>
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  <p>
+    <label for="id_neighbourhoods_csv">Preferred neighbourhoods</label><br>
+    <input type="text" name="neighbourhoods_csv" id="id_neighbourhoods_csv" value="{{ form.initial.neighbourhoods_csv }}">
+  </p>
+  <button type="submit">Save</button>
+</form>
+<p><a href="{% url 'sharing_request' %}">Find Roommates</a></p>

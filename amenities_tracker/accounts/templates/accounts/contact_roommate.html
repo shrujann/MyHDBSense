@@ -1,0 +1,6 @@
+<h2>Message to {{ recipient.username }}</h2>
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Send</button>
+</form>
+<p><a href="{% url 'sharing_request' %}">Back</a></p>

@@ -1,0 +1,25 @@
+<h2>Find Roommates</h2>
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Search</button>
+</form>
+
+{% if results is not None %}
+  <h3>Matches</h3>
+  {% if results %}
+    <ul>
+      {% for p in results %}
+        <li>
+          <strong>@{{ p.user.username }}</strong>
+          — Age: {{ p.age|default:"?" }},
+          Gender: {{ p.get_gender_display }},
+          Max Budget: {{ p.max_budget|default:"?" }},
+          Areas: {{ p.preferred_neighbourhoods|join:", " }}
+          · <a href="{% url 'contact_roommate' p.user.id %}">Contact</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No matches.</p>
+  {% endif %}
+{% endif %}
