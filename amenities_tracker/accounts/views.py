@@ -364,7 +364,7 @@ def search_amenities(request):
     postal_code = request.GET.get("q")
     amenities = []
     token = get_onemap_token()
-    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker", "tourism", "preschool", "childcare", "gym"]
+    categories = ["schools", "eldercare", "mrt", "library", "clinic", "hawker", "tourism", "preschool", "childcare", "gym", "sportsg"]
 
     center_lat, center_lon = None, None
 
@@ -621,6 +621,30 @@ def search_amenities(request):
                                 "description": record.get("description"),  # operating hours or facilities listed
                                 "distance": round(dist, 2),
                             })
+            
+            if category == "sportsg":
+                records = findsportsg(postal_code)
+                for record in records:
+                    amenity_lat = record.get("latitude")
+                    amenity_lon = record.get("longitude")
+                    if amenity_lat and amenity_lon and lat and lon:
+                        dist = haversine(lat, lon, amenity_lat, amenity_lon)
+                        if dist <= 1.5:
+                            amenities.append({
+                                "name": record.get("name"),
+                                "type": "SportSG",
+                                "address": record.get("address"),
+                                "postal_code": record.get("postal_code"),
+                                "contacts": record.get("contacts"),
+                                "operating_hours": record.get("operating_hours"),
+                                "info_url": record.get("info_url"),
+                                "status": record.get("status"),
+                                "latitude": amenity_lat,
+                                "longitude": amenity_lon,
+                                "distance": round(dist, 2),
+                                "facility_type": record.get("facility_type"),
+                            })
+
 
         context = {
             "amenities": amenities,
@@ -1269,6 +1293,91 @@ def findgym(postalcode):
         print(f"Error fetching gym data: {e}")
         return []
 
+# -------- SportSG/ActiveSG Fetching Function --------
+
+def findsportsg(postalcode):
+    """
+    Fetch SportSG/ActiveSG facilities from Singapore government API.
+    Handles Point and Polygon geometries; Polygon returns the centroid.
+    Returns list of dicts with centre name, address, contacts, facility info, and coordinates.
+    """
+    dataset_id = "d_9b87bab59d036a60fad2a91530e10773"
+    postal_code = str(postalcode)
+
+    try:
+        url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
+        response = requests.get(url, timeout=10)
+        json_data = response.json()
+
+        if json_data['code'] != 0 or 'data' not in json_data or not json_data['data'].get('url'):
+            print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
+            return []
+
+        download_url = json_data['data']['url']
+        response = requests.get(download_url, timeout=10)
+        geojson_data = json.loads(response.text)
+
+        facilities = []
+        for feature in geojson_data.get('features', []):
+            props = feature.get('properties', {})
+            geom = feature.get('geometry', {})
+            coords = None
+
+            # Geometry: support both Point and Polygon (use centroid)
+            if geom.get('type') == 'Point':
+                coords = geom.get('coordinates', [None, None])
+                lat, lon = coords[1], coords[0]
+            elif geom.get('type') == 'Polygon':
+                poly = geom.get('coordinates', [])
+                # Get centroid if possible (average of all points, 2D only)
+                if poly and isinstance(poly, list) and poly[0]:
+                    xs = [pt[0] for pt in poly[0] if len(pt) >= 2]
+                    ys = [pt[1] for pt in poly[0] if len(pt) >= 2]
+                    if xs and ys:
+                        lon = sum(xs) / len(xs)
+                        lat = sum(ys) / len(ys)
+                    else:
+                        lat, lon = None, None
+                else:
+                    lat, lon = None, None
+            else:
+                lat, lon = None, None
+
+            # Parse values from HTML Description table
+            soup = BeautifulSoup(props.get('Description', ''), 'html.parser')
+            rows = soup.find_all('tr')
+            data = {}
+            for row in rows[1:]:
+                cells = row.find_all(['th', 'td'])
+                if len(cells) == 2:
+                    key = cells[0].get_text(strip=True)
+                    value = cells[1].get_text(strip=True)
+                    data[key] = value if value else None
+
+            record = {
+                "name": data.get("SPORTS_CEN"),
+                "facility_type": data.get("FACILITIES"),
+                "address": f"{data.get('HOUSE_BLOC', '')} {data.get('ROAD_NAME', '')}".strip() if data.get('HOUSE_BLOC') or data.get('ROAD_NAME') else None,
+                "postal_code": data.get("POSTAL_COD"),
+                "contacts": data.get("CONTACT_NO"),
+                "operating_hours": data.get("STADIUM_OP") or data.get("GYM_OPERAT") or data.get("SWIMMING_C") or data.get("SPORTS_HAL"),
+                "booking_url": data.get("BOOKING_LI"),
+                "info_url": data.get("INFORMATIO"),
+                "status": data.get("STATUS"),
+                "latitude": lat,
+                "longitude": lon,
+                "last_update": data.get("FMEL_UPD_D"),
+                # Include any facility counts etc as needed, e.g. Badminton: data.get("BADMINTON_") etc.
+                "description": data.get("FACILITY_I"),
+            }
+
+            facilities.append(record)
+
+        return facilities
+
+    except Exception as e:
+        print(f"Error fetching sportsG data: {e}")
+        return []
 
 
 
