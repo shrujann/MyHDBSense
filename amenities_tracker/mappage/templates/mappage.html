@@ -50,13 +50,100 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Search UI */
+    .search-container {
+      position: relative;
+      width: 320px;
+      max-width: 70vw;
+    }
+
+    .search-container input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      outline: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .search-container input[type="text"]:focus {
+      border-color: #007bff;
+      box-shadow: 0 2px 8px rgba(0,123,255,0.2);
+    }
+
+    .search-results {
+      position: absolute;
+      top: 42px;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-top: none;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1100;
+      border-bottom-left-radius: 4px;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .search-results.hidden {
+      display: none;
+    }
+
+    .search-results ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .search-results li {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #f2f2f2;
+    }
+
+    .search-results li:last-child {
+      border-bottom: none;
+    }
+
+    .search-results li:hover {
+      background: #f7f9fc;
+    }
+
+    .result-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .result-sub {
+      display: block;
+      color: #666;
+      font-size: 12px;
+      margin-top: 3px;
     }
   </style>
 </head>
 <body>
   <div class="top-bar">
     <a href="{% url 'results' %}" class="results-link">View Existing Amentity</a>
+
+    <!-- Address search -->
+    <div class="search-container">
+      <input id="search-input" type="text" placeholder="Search address in Singapore..." autocomplete="off" />
+      <div id="search-results" class="search-results hidden">
+        <ul id="search-list"></ul>
+      </div>
+    </div>
   </div>
+
   <div class="map-container">
       <a href="{% url 'home' %}" class="return-logo">    <!-- Return to home page -->
       <img src="https://img.icons8.com/ios-filled/50/000000/left.png" alt="Return to Home">
@@ -78,6 +165,118 @@
     }).addTo(map);
 
     let marker;
+
+    // Debounce helper
+    function debounce(fn, wait = 300) {
+      let timeout;
+      return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn(...args), wait);
+      };
+    }
+
+    // OneMap Search API (no token needed)
+    async function searchOneMap(query) {
+      if (!query || query.trim().length < 3) return [];
+      const url = `https://www.onemap.gov.sg/api/common/elastic/search?searchVal=${encodeURIComponent(query)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`;
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        const results = data.results || [];
+        // Normalize to { title, subtitle, lat, lon }
+        return results.slice(0, 8).map(r => ({
+          title: r.SEARCHVAL || r.BUILDING || r.ADDRESS,
+          subtitle: r.ADDRESS || `${r.BLOCK || ''} ${r.ROAD_NAME || ''}`.trim(),
+          lat: parseFloat(r.LATITUDE),
+          lon: parseFloat(r.LONGITUDE),
+        }));
+      } catch (error) {
+        console.error('Search error:', error);
+        return [];
+      }
+    }
+
+    // Search UI elements
+    const inputEl = document.getElementById('search-input');
+    const resultsEl = document.getElementById('search-results');
+    const listEl = document.getElementById('search-list');
+
+    let searchResults = [];
+
+    function clearResults() {
+      listEl.innerHTML = '';
+      resultsEl.classList.add('hidden');
+      searchResults = [];
+    }
+
+    function showResults(items) {
+      if (!items.length) {
+        clearResults();
+        return;
+      }
+      searchResults = items;
+      listEl.innerHTML = items.map((it, idx) => `
+        <li data-idx="${idx}">
+          <span class="result-title">${it.title || 'Result'}</span>
+          ${it.subtitle ? `<span class="result-sub">${it.subtitle}</span>` : ''}
+        </li>
+      `).join('');
+      resultsEl.classList.remove('hidden');
+    }
+
+    const doSearch = debounce(async () => {
+      const q = inputEl.value.trim();
+      if (q.length < 3) {
+        clearResults();
+        return;
+      }
+      const items = await searchOneMap(q);
+      showResults(items);
+    }, 300);
+
+    inputEl.addEventListener('input', doSearch);
+    inputEl.addEventListener('focus', () => {
+      if (listEl.children.length) resultsEl.classList.remove('hidden');
+    });
+
+    // Click outside to close results
+    document.addEventListener('click', (e) => {
+      if (!resultsEl.contains(e.target) && e.target !== inputEl) {
+        clearResults();
+      }
+    });
+
+    // Handle result selection
+    listEl.addEventListener('click', (e) => {
+      const li = e.target.closest('li');
+      if (!li) return;
+      const idx = Number(li.getAttribute('data-idx'));
+      const selected = searchResults[idx];
+      if (!selected) return;
+
+      clearResults();
+      inputEl.value = selected.title;
+
+      // Pan map and drop marker
+      const lat = selected.lat;
+      const lng = selected.lon;
+      map.flyTo([lat, lng], 17, { duration: 0.8 });
+
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng]).addTo(map);
+      }
+
+      marker.bindPopup(selected.title).openPopup();
+
+      // Redirect to form with coordinates
+      setTimeout(() => {
+        const formUrl = `/map/form/?lat=${lat}&lng=${lng}`;
+        window.location.href = formUrl;
+      }, 800);
+    });
 
     // Add a click listener to the map
     map.on('click', (event) => {
