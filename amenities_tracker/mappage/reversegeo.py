@@ -1,5 +1,5 @@
 
-#Ignore this file, just for testing reverse geocoding cuz macbook is fking stupid
+#Ignore this file, just for testing reverse geocoding 
 
 import ssl
 import certifi
