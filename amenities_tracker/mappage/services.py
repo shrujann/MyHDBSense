@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any, Tuple
 
 
 class GeocodingService:
-    """Service for handling geocoding and reverse geocoding operations"""
+    #Service for handling geocoding and reverse geocoding operations
     
     def __init__(self):
         ctx = ssl.create_default_context(cafile=certifi.where())
@@ -16,13 +16,6 @@ class GeocodingService:
     def get_address_from_coordinates(self, latitude: float, longitude: float) -> Optional[str]:
         """
         Get address from latitude and longitude coordinates
-        
-        Args:
-            latitude (float): Latitude coordinate
-            longitude (float): Longitude coordinate
-            
-        Returns:
-            Optional[str]: Address string or None if not found
         """
         try:
             location_data = self.geolocator.reverse(f"{latitude}, {longitude}")
@@ -34,12 +27,6 @@ class GeocodingService:
     def get_coordinates_from_address(self, address: str) -> Optional[Tuple[float, float]]:
         """
         Get coordinates from address string
-        
-        Args:
-            address (str): Address to geocode
-            
-        Returns:
-            Optional[Tuple[float, float]]: (latitude, longitude) or None if not found
         """
         try:
             location_data = self.geolocator.geocode(address)
@@ -53,13 +40,6 @@ class GeocodingService:
     def get_detailed_address_info(self, latitude: float, longitude: float) -> Optional[Dict[str, Any]]:
         """
         Get detailed address information from coordinates
-        
-        Args:
-            latitude (float): Latitude coordinate
-            longitude (float): Longitude coordinate
-            
-        Returns:
-            Optional[Dict[str, Any]]: Dictionary with address details or None if not found
         """
         try:
             location_data = self.geolocator.reverse(f"{latitude}, {longitude}")
@@ -78,7 +58,7 @@ class GeocodingService:
 
 
 class LocationService:
-    """Service for handling location-related business operations"""
+    #Service for handling location-related business operations
     
     def __init__(self):
         self.geocoding_service = GeocodingService()
@@ -113,21 +93,12 @@ class LocationService:
     def get_all_locations(self) -> List[location]:
         """
         Get all locations from the database
-        
-        Returns:
-            List[location]: List of all location instances
         """
         return location.objects.all()
     
     def get_location_by_id(self, location_id: int) -> Optional[location]:
         """
         Get a location by its ID
-        
-        Args:
-            location_id (int): ID of the location
-            
-        Returns:
-            Optional[location]: Location instance or None if not found
         """
         try:
             return get_object_or_404(location, id=location_id)
@@ -137,12 +108,6 @@ class LocationService:
     def upvote_location(self, location_id: int) -> Dict[str, Any]:
         """
         Increment the upvote count for a location
-        
-        Args:
-            location_id (int): ID of the location to upvote
-            
-        Returns:
-            Dict[str, Any]: Dictionary with upvote count and success status
         """
         location_instance = get_object_or_404(location, id=location_id)
         location_instance.upvoteCount += 1
@@ -156,12 +121,6 @@ class LocationService:
     def get_coordinates_for_address(self, address: str) -> Optional[Dict[str, Any]]:
         """
         Get coordinates and formatted address for an address string
-        
-        Args:
-            address (str): Address to geocode
-            
-        Returns:
-            Optional[Dict[str, Any]]: Dictionary with coordinates and address or None
         """
         coordinates = self.geocoding_service.get_coordinates_from_address(address)
         if coordinates:
@@ -178,19 +137,12 @@ class LocationService:
     def get_address_for_coordinates(self, latitude: float, longitude: float) -> Optional[Dict[str, Any]]:
         """
         Get detailed address information for coordinates
-        
-        Args:
-            latitude (float): Latitude coordinate
-            longitude (float): Longitude coordinate
-            
-        Returns:
-            Optional[Dict[str, Any]]: Dictionary with detailed address info or None
         """
         return self.geocoding_service.get_detailed_address_info(latitude, longitude)
 
 
 class LocationController:
-    """Controller for handling location-related operations and coordinating between services and views"""
+    #Controller for handling location-related operations and coordinating between services and views"""
     
     def __init__(self):
         self.location_service = LocationService()
@@ -198,12 +150,6 @@ class LocationController:
     def handle_location_form_submission(self, form_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Handle location form submission with validation and creation
-        
-        Args:
-            form_data (Dict[str, Any]): Form data from POST request
-            
-        Returns:
-            Dict[str, Any]: Result with success status and location info
         """
         from .forms import LocationForm
         
@@ -231,9 +177,6 @@ class LocationController:
     def get_all_locations_for_display(self) -> Dict[str, Any]:
         """
         Get all locations formatted for display
-        
-        Returns:
-            Dict[str, Any]: Dictionary with locations data
         """
         locations = self.location_service.get_all_locations()
         return {
@@ -244,12 +187,6 @@ class LocationController:
     def handle_upvote(self, location_id: int) -> Dict[str, Any]:
         """
         Handle location upvote request
-        
-        Args:
-            location_id (int): ID of location to upvote
-            
-        Returns:
-            Dict[str, Any]: Dictionary with upvote result
         """
         try:
             result = self.location_service.upvote_location(location_id)
@@ -263,12 +200,6 @@ class LocationController:
     def handle_geocoding_request(self, address: str) -> Dict[str, Any]:
         """
         Handle geocoding request for address
-        
-        Args:
-            address (str): Address to geocode
-            
-        Returns:
-            Dict[str, Any]: Dictionary with coordinates or error
         """
         result = self.location_service.get_coordinates_for_address(address)
         if result:
@@ -279,13 +210,6 @@ class LocationController:
     def handle_reverse_geocoding_request(self, latitude: float, longitude: float) -> Dict[str, Any]:
         """
         Handle reverse geocoding request for coordinates
-        
-        Args:
-            latitude (float): Latitude coordinate
-            longitude (float): Longitude coordinate
-            
-        Returns:
-            Dict[str, Any]: Dictionary with address details or error
         """
         try:
             result = self.location_service.get_address_for_coordinates(latitude, longitude)
