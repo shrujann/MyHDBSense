@@ -9,13 +9,6 @@ from django.contrib.auth import login, authenticate, logout
 from django_otp.plugins.otp_email.models import EmailDevice
 from .forms import RoommateProfileForm, SharingRequestForm, ContactMessageForm, OTPForm, CustomUserCreationForm, LoginForm
 from .models import CustomUser
-import requests
-import pandas as pd
-from math import radians, sin, cos, sqrt, atan2
-import concurrent.futures
-import json
-from django.conf import settings
-from bs4 import BeautifulSoup
 from . import services
 
 # registeration view
