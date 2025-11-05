@@ -1,0 +1,240 @@
+{% load static %}
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3">
+  <div class="container">
+
+    <!-- Brand -->
+    <a class="navbar-brand fw-bold" href="{% url 'home' %}" style="color:#2563eb;">MyHDBSense</a>
+
+    <!-- Toggler -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav mx-auto gap-lg-3">
+        <!-- Properties -->
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'properties' %}active{% endif %}"
+             href="{% url 'properties' %}">Properties</a>
+        </li>
+
+        <!-- Amenities -->
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'amenities' or request.resolver_match.url_name == 'search_amenities' %}active{% endif %}"
+             href="{% url 'amenities' %}">Amenities</a>
+        </li>
+
+        <!-- Roommates -->
+        {% with name=request.resolver_match.url_name %}
+        <li class="nav-item">
+          <a class="nav-link {% if name in 'roommates sharing_request roommate_profile_edit' %}active{% endif %}"
+             href="{% url 'roommates' %}">Roommates</a>
+        </li>
+        {% endwith %}
+      </ul>
+
+      <!-- Right side Auth -->
+      <div class="d-flex ms-lg-3 align-items-center gap-2">
+        {% if user.is_authenticated %}
+          <!-- Profile Button (goes directly to profile page) -->
+          <a href="{% url 'roommate_profile_edit' %}"
+             class="btn btn-outline-primary rounded-pill fw-semibold"
+             style="border-color:#2563eb;color:#2563eb;">
+            {{ user.email|default:user.username|default:"Profile" }}
+          </a>
+        {% else %}
+          <!-- Sign In Button -->
+          <button class="btn btn-primary rounded-pill px-4 fw-semibold"
+                  style="background:#2563eb;border:none;"
+                  data-bs-toggle="modal" data-bs-target="#authModal">
+            Sign In
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<style>
+  .nav-link { font-weight:500; color:#333; }
+  .nav-link.active, .nav-link:hover { color:#2563eb; }
+  .auth-modal .auth-header { background:#2563eb; }
+  .auth-modal .form-control { padding:.7rem .9rem; font-size:.95rem; }
+  .auth-modal .submit-btn { background:#2563eb; border:none; }
+  .alert-danger { background:#fde8e8; border:none; color:#b91c1c; font-size:.9rem; border-radius:.5rem; }
+</style>
+
+{% if not user.is_authenticated %}
+<!-- AUTH MODAL -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden auth-modal">
+
+      <!-- Header -->
+      <div class="text-white text-center py-4 auth-header">
+        <h5 class="fw-bold mb-1" id="authTitle">Welcome Back</h5>
+        <p class="mb-0 opacity-75 small" id="authSubtitle">Sign in to access your HDB assistant</p>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body p-4">
+
+        <!-- LOGIN -->
+        <form id="loginForm" method="post" action="{% url 'login' %}" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="next" id="loginNextInput" value="{{ request.GET.next|default:'' }}"/>
+
+          {% if messages %}
+            {% for message in messages %}
+              {% if 'auth' in message.tags %}
+                <div class="alert alert-danger mt-2 mb-3 text-center">{{ message }}</div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+
+          <div class="mb-3">
+            <label for="loginUsername" class="form-label fw-semibold small mb-1">Email Address</label>
+            <input type="text" id="loginUsername" name="username" class="form-control rounded-3"
+                   placeholder="Enter your email" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="loginPassword" class="form-label fw-semibold small mb-1">Password</label>
+            <input type="password" id="loginPassword" name="password" class="form-control rounded-3"
+                   placeholder="Enter your password" required>
+          </div>
+
+          <div class="text-end mb-3">
+            <a href="#" id="switchToReset" class="link-primary small text-decoration-none">Forgot Password?</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold rounded-pill submit-btn">
+            Sign In to MyHDBSense
+          </button>
+
+          <p class="text-center mt-3 mb-0 small">
+            Don’t have an account? <a href="#" class="fw-semibold" id="switchToRegister">Register now!</a>
+          </p>
+        </form>
+
+        <!-- REGISTER -->
+        <form id="registerForm" method="post" action="{% url 'register' %}" class="d-none" novalidate>
+          {% csrf_token %}
+
+          {% if messages %}
+            {% for message in messages %}
+              {% if 'reg' in message.tags %}
+                <div class="alert alert-danger py-2 small mb-3">{{ message|linebreaksbr }}</div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+
+          <div class="mb-3">
+            <label for="regEmail" class="form-label fw-semibold small mb-1">Email Address</label>
+            <input type="email" id="regEmail" name="email" class="form-control rounded-3"
+                   placeholder="Enter a valid email address" required>
+          </div>
+          <input type="hidden" name="username" id="regUsernameMirror"> <!-- hidden username mirror -->
+
+          <div class="mb-3">
+            <label for="regPassword" class="form-label fw-semibold small mb-1">Password</label>
+            <input type="password" id="regPassword" name="password1" class="form-control rounded-3"
+                   placeholder="Minimum 8 characters" minlength="8" required>
+          </div>
+          <div class="mb-3">
+            <label for="regPassword2" class="form-label fw-semibold small mb-1">Confirm Password</label>
+            <input type="password" id="regPassword2" name="password2" class="form-control rounded-3"
+                   placeholder="Re-enter your password" minlength="8" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold rounded-pill submit-btn">
+            Create Account
+          </button>
+          <p class="text-center mt-3 mb-0 small">
+            Already have an account? <a href="#" class="fw-semibold" id="switchToLoginFromReg">Back to Sign In</a>
+          </p>
+        </form>
+
+        <!-- RESET -->
+        <form id="resetForm" method="post" action="{% url 'password_reset' %}" class="d-none" novalidate>
+          {% csrf_token %}
+          {% if messages %}
+            {% for message in messages %}
+              {% if 'reset' in message.tags %}
+                <div class="alert alert-danger py-2 small mb-3">{{ message }}</div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          <div class="mb-3 text-center">
+            <p class="text-muted small mb-0">
+              Enter your email and we’ll send you a link to reset your password.
+            </p>
+          </div>
+          <div class="mb-3">
+            <label for="resetEmail" class="form-label fw-semibold small mb-1">Email Address</label>
+            <input type="email" id="resetEmail" name="email" class="form-control rounded-3"
+                   placeholder="name@example.com" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold rounded-pill submit-btn">
+            Send Reset Instructions
+          </button>
+          <p class="text-center mt-3 mb-0 small">
+            Remembered your password? <a href="#" class="fw-semibold" id="switchToLoginFromReset">Back to Sign In</a>
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Bootstrap Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const loginForm = document.getElementById("loginForm");
+    const registerForm = document.getElementById("registerForm");
+    const resetForm = document.getElementById("resetForm");
+    const title = document.getElementById("authTitle");
+    const subtitle = document.getElementById("authSubtitle");
+
+    const showPane = pane => {
+      [loginForm, registerForm, resetForm].forEach(f => f.classList.add("d-none"));
+      pane.classList.remove("d-none");
+      if (pane === loginForm) {
+        title.textContent = "Welcome Back";
+        subtitle.textContent = "Sign in to access your HDB assistant";
+      } else if (pane === registerForm) {
+        title.textContent = "Create Account";
+        subtitle.textContent = "Join MyHDBSense in seconds";
+      } else {
+        title.textContent = "Reset Your Password";
+        subtitle.textContent = "We'll send you a link to set a new password";
+      }
+    };
+
+    // Modal navigation
+    document.getElementById("switchToRegister")?.addEventListener("click", e => { e.preventDefault(); showPane(registerForm); });
+    document.getElementById("switchToLoginFromReg")?.addEventListener("click", e => { e.preventDefault(); showPane(loginForm); });
+    document.getElementById("switchToReset")?.addEventListener("click", e => { e.preventDefault(); showPane(resetForm); });
+    document.getElementById("switchToLoginFromReset")?.addEventListener("click", e => { e.preventDefault(); showPane(loginForm); });
+
+    const params = new URLSearchParams(window.location.search);
+    const open = pane => { const m = new bootstrap.Modal('#authModal'); m.show(); showPane(pane); };
+    if (params.get("showLogin") === "true") open(loginForm);
+    if (params.get("showRegister") === "true") open(registerForm);
+    if (params.get("showReset") === "true") open(resetForm);
+
+    // Set "next" for login redirect
+    const nextFromQuery = params.get("next");
+    const nextInput = document.getElementById("loginNextInput");
+    if (nextInput && nextFromQuery) nextInput.value = nextFromQuery;
+
+    // Mirror email into username (Django backend expects username)
+    const regEmail = document.getElementById('regEmail');
+    const regUsernameMirror = document.getElementById('regUsernameMirror');
+    if (regEmail && regUsernameMirror) {
+      regEmail.addEventListener('input', () => regUsernameMirror.value = regEmail.value);
+    }
+  });
+</script>

@@ -1,114 +1,263 @@
 <!DOCTYPE html>
 <html lang="en">
-    {% load static %}
+{% load static %}
 <head>
-    <meta charset="UTF-8">
-    <title>Nearby HDB Resale Flats</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-        th { background-color: #f2f2f2; }
-        #map {
-            height: 500px;
-            width: 100%;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>MyHDBSense | Search Results</title>
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <style>
+    :root{
+      --border:#e9edf2;
+      --card-r:16px;
+    }
+    body{ background:#f6f8fb; }
+
+    .mhs-card{ background:#fff; border:1px solid var(--border); border-radius:var(--card-r);
+               box-shadow:0 6px 16px rgba(10,31,68,.06); }
+
+    .prop-img{ width:100%; height:180px; object-fit:cover; border-radius:12px; }
+    .prop-card{ border:1px solid var(--border); border-radius:14px; padding:12px; background:#fff;
+                transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease; height:100%; }
+    .prop-card:hover{ transform:translateY(-2px); box-shadow:0 10px 22px rgba(10,31,68,.10); border-color:#dfe6ee; }
+    .chip{ font-size:.75rem; padding:.15rem .5rem; border-radius:999px; background:#f1f3f5; }
+    .price{ font-weight:800; color:#0a7a35; }
+
+    /* Map */
+    #resultsMap{ width:100%; height:480px; border-radius:12px; border:1px solid var(--border); }
+    .legend{ position:absolute; left:14px; bottom:14px; z-index:400; background:#fff; border:1px solid var(--border);
+             border-radius:12px; padding:8px 10px; box-shadow:0 6px 16px rgba(10,31,68,.08); font-size:.92rem; }
+    .legend .dot{ width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px; }
+    .dot-blue{ background:#2563eb; }
+  </style>
 </head>
 <body>
 
-<h2>Nearby Flats (within 3 km)</h2>
+  {% include "accounts/navbar.html" %}
 
-{% if flats %}
-    <table>
-        <tr>
-            <th>Town</th>
-            <th>Flat Type</th>
-            <th>Street</th>
-            <th>Floor Area (sqm)</th>
-            <th>Remaining Lease</th>
-            <th>Price (S$)</th>
-            <th>Distance (km)</th>
-        </tr>
-        {% for f in flats %}
-        <tr>
-            <td>{{ f.town }}</td>
-            <td>{{ f.flat_type }}</td>
-            <td>{{ f.street_name }}</td>
-            <td>{{ f.floor_area }}</td>
-            <td>{{ f.remaining_lease }}</td>
-            <td>{{ f.resale_price }}</td>
-            <td>{{ f.distance }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+  <!-- Search HDB Resale Flats (from your snippet) -->
+  <section class="py-5 bg-white">
+    <div class="container">
+      <div class="row g-4 align-items-center">
+        <div class="col-lg-5">
+          <h2 class="fw-bold mb-2">Search HDB Resale Flats</h2>
+          <p class="text-muted mb-4">Look up recent resale listings by postal code.</p>
+          <form method="get" action="{% url 'search_flats' %}" class="d-flex gap-2">
+            <input type="text" name="q" class="form-control form-control-lg" placeholder="Enter postal code" required>
+            <button type="submit" class="btn btn-dark btn-lg">
+              <i class="bi bi-search me-1"></i>Search
+            </button>
+          </form>
+        </div>
+        <div class="col-lg-7">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Tip:</strong>
+                <span class="ms-2 text-muted">You can also paste a block number or street name.</span>
+              </div>
+              <ul class="mb-0 small text-muted">
+                <li>Exact match on 6-digit postal codes.</li>
+                <li>Returns latest transactions & key attributes.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
- <!-- Map container -->
-<div id="map" style="height: 500px;"></div>
+  <main class="container py-4"
+        data-center-lat="{{ center_lat|default:1.3521 }}"
+        data-center-lng="{{ center_lng|default:103.8198 }}">
 
-<!-- Hidden JSON data -->
-{{ flats|json_script:"flats-data" }}
+    <!-- Heading -->
+    <header class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h2 class="mb-1">Search Results</h2>
+        <p class="text-muted mb-0">Found <span id="propertyCount">0</span> HDB properties matching your criteria</p>
+      </div>
+      <!-- “New Search” just reloads this page without a query -->
+      <a class="btn btn-outline-secondary rounded-pill d-none d-md-inline-flex" href="{% url 'search_flats' %}">
+        New Search
+      </a>
+    </header>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-    // Get center coordinates from Django
-    var center = [parseFloat("{{ center_lat }}"), parseFloat("{{ center_lng }}")];
+    {% if flats %}
+      <!-- All Listings -->
+      <section class="mb-4">
+        <h4 class="fw-bold mb-3">All Listings</h4>
+        <div id="allProperties" class="row g-4"></div>
+      </section>
 
-    // Parse flats JSON from the hidden script
-    var flats = JSON.parse(document.getElementById("flats-data").textContent);
+      <!-- Map -->
+      <section class="mb-5">
+        <div class="position-relative">
+          <div id="resultsMap"></div>
+          <div class="legend"><span class="dot dot-blue"></span>Within 3 km</div>
+        </div>
+      </section>
 
-    // Initialize map
-    var map = L.map("map").setView(center, 14);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors"
-    }).addTo(map);
+      <!-- Hidden JSON data from server -->
+      {{ flats|json_script:"flats-data" }}
 
-    // Step 2: Draw a 3 km radius circle around center
-    var circle = L.circle(center, {
-        radius: 3000,  // 3000 meters = 3 km
-        color: "blue",
-        fillColor: "#cce5ff",
-        fillOpacity: 0.2
-    }).addTo(map);
+      <!-- Noscript fallback -->
+      <noscript>
+        <div class="mhs-card p-3">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Town</th><th>Flat Type</th><th>Street</th><th>Floor Area (sqm)</th>
+                <th>Remaining Lease</th><th>Price (S$)</th><th>Distance (km)</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for f in flats %}
+              <tr>
+                <td>{{ f.town }}</td>
+                <td>{{ f.flat_type }}</td>
+                <td>{{ f.street_name }}</td>
+                <td>{{ f.floor_area }}</td>
+                <td>{{ f.remaining_lease }}</td>
+                <td>{{ f.resale_price }}</td>
+                <td>{{ f.distance }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </noscript>
+    {% else %}
+      <div class="alert alert-light border text-muted">
+        No flats found within 3 km of that query.
+      </div>
+      <!-- Still emit an empty data tag so JS won’t break -->
+      <script id="flats-data" type="application/json">[]</script>
+    {% endif %}
 
-    // Step 3: Define a custom house icon
-    var houseIcon = L.icon({
-        iconUrl: "{% static 'accounts/icons/house.svg' %}", // place house.svg in static/accounts/icons
-        iconSize: [30, 30],  // adjust size as needed
-        iconAnchor: [15, 30], // so it points at the location properly
-        popupAnchor: [0, -28]
-    });
+    <!-- Optional debug line (safe if vars missing) -->
+    <p class="text-muted small mt-3">
+      Center coordinates: Latitude = {{ center_lat|default:1.3521 }}, Longitude = {{ center_lng|default:103.8198 }}
+    </p>
+  </main>
 
-    // Step 4: Add markers with custom icon
-    flats.forEach(f => {
-        if (f.latitude && f.longitude) {
-            L.marker([f.latitude, f.longitude], {icon: houseIcon})
-              .addTo(map)
-              .bindPopup(
-                `<b>${f.town}</b><br>${f.flat_type}<br>Price: $${f.resale_price}<br>Distance: ${f.distance} km`
-              );
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // ---- Read server-passed data ----
+    const DATA_TAG = document.getElementById('flats-data');
+    let FLATS = [];
+    try { FLATS = JSON.parse(DATA_TAG?.textContent || '[]'); } catch { FLATS = []; }
+
+    const mainEl = document.querySelector('main.container');
+    let CENTER = [
+      parseFloat(mainEl?.dataset.centerLat ?? '1.3521'),
+      parseFloat(mainEl?.dataset.centerLng ?? '103.8198')
+    ];
+
+    // ---- Helpers ----
+    const money = (n)=> {
+      if(n==null) return '—';
+      const num = Number(n);
+      return isNaN(num) ? n : num.toLocaleString('en-SG');
+    };
+    const km = (n)=> (n==null ? '—' : Number(n).toFixed(2));
+    const firstCaps = (x)=> (x||'').toLowerCase().replace(/\b\w/g,m=>m.toUpperCase());
+
+    const cardHTML = (f) => {
+      const img = "{% static 'accounts/img/flat_placeholder.jpg' %}";
+      const lease = f.remaining_lease ? `${f.remaining_lease}` : '—';
+      const area  = f.floor_area ? `${f.floor_area} sqm` : '—';
+      const price = f.resale_price ? `$${money(f.resale_price)}` : '—';
+
+      return `
+      <div class="col-12 col-sm-6 col-lg-4">
+        <div class="prop-card h-100">
+          <img class="prop-img mb-2" src="${img}" alt="HDB Flat">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="chip">${firstCaps(f.flat_type || '')}</span>
+            <span class="chip">${firstCaps(f.town || '')}</span>
+            ${f.distance!=null ? `<span class="chip"><i class="bi bi-geo-alt me-1"></i>${km(f.distance)} km</span>` : ""}
+          </div>
+          <div class="price mb-1">${price}</div>
+          <div class="small text-muted mb-1"><i class="bi bi-geo-alt me-1"></i>${firstCaps(f.street_name || '')}</div>
+          <div class="small text-muted"><i class="bi bi-arrows-fullscreen me-1"></i>${area} &nbsp;•&nbsp; <i class="bi bi-clock me-1"></i>${lease}</div>
+        </div>
+      </div>`;
+    };
+
+    // ---- Render Listings ----
+    function renderGrid(flats){
+      const wrap = document.getElementById('allProperties');
+      const countEl = document.getElementById('propertyCount');
+      if(!wrap){ return; }
+      wrap.innerHTML = flats.map(cardHTML).join('') || `
+        <div class="alert alert-light border text-muted">
+          No flats found within 3 km of that query.
+        </div>`;
+      if(countEl) countEl.textContent = flats.length;
+    }
+
+    // ---- Map ----
+    let MAP, CIRCLE, MARKERS = [];
+    function ensureMap(){
+      if(MAP) return;
+      MAP = L.map('resultsMap').setView(CENTER, 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '© OpenStreetMap'
+      }).addTo(MAP);
+    }
+
+    function renderMap(flats){
+      const mapEl = document.getElementById('resultsMap');
+      if(!mapEl) return;
+      ensureMap();
+      // clear
+      MARKERS.forEach(m => MAP.removeLayer(m)); MARKERS = [];
+      if(CIRCLE){ MAP.removeLayer(CIRCLE); CIRCLE = null; }
+
+      MAP.setView(CENTER, 13);
+      CIRCLE = L.circle(CENTER, { radius: 3000, color:'#2563eb', fillColor:'#cce5ff', fillOpacity:.2 }).addTo(MAP);
+
+      const houseIcon = L.icon({
+        iconUrl: "{% static 'accounts/icons/house.svg' %}",
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        popupAnchor: [0, -26]
+      });
+
+      const group = [];
+      flats.forEach(f=>{
+        if(f.latitude && f.longitude){
+          const m = L.marker([f.latitude, f.longitude], { icon: houseIcon })
+            .bindPopup(`<b>${firstCaps(f.town||'')}</b><br>${firstCaps(f.flat_type||'')}<br>Price: $${money(f.resale_price)}<br>Distance: ${km(f.distance)} km`);
+          m.addTo(MAP); MARKERS.push(m); group.push([f.latitude, f.longitude]);
         }
+      });
+
+      if(group.length){
+        const bounds = L.latLngBounds(group);
+        bounds.extend(L.latLng(CENTER[0], CENTER[1]));
+        MAP.fitBounds(bounds, { padding:[30,30] });
+      }
+      setTimeout(()=> MAP.invalidateSize(), 60);
+    }
+
+    // ---- Boot ----
+    document.addEventListener('DOMContentLoaded', ()=>{
+      renderGrid(FLATS);
+      renderMap(FLATS);
     });
-</script>
-
-
-<!-- Debug -->
-<p>
-    Center coordinates: Latitude = {{ center_lat }}, Longitude = {{ center_lng }}
-</p>
-
-
-{% else %}
-    <p>No flats found within 3 km of that postal code.</p>
-{% endif %}
-
+  </script>
 </body>
 </html>

@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from . import views
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('register/', views.register, name='register'), # registration view
@@ -24,12 +25,16 @@ urlpatterns = [
     path('login/', views.login_view, name='login'), # login view
     path('logout/', views.logout_view, name='logout'), # logout view
     path('home/', views.home, name='home'), # home view
+
+    path('properties/', views.properties, name='properties'),
     path("search/", views.search_flats, name="search_flats"), # search flats view
     path('search-amenities/', views.search_amenities, name='search_amenities'),
-    path('home2/', views.home2, name='home2'), # home2 view
+    path('amenities/', views.amenities, name='amenities'), # amenities view
+
+    path('password-reset/', auth_views.PasswordResetView.as_view(template_name='accounts/password_reset.html'), name='password_reset'),
 
     path('roommate/profile/', views.roommate_profile_edit, name='roommate_profile_edit'),
     path('roommate/sharing-request/', views.sharing_request, name='sharing_request'),
     path('roommate/contact/<int:user_id>/', views.contact_roommate, name='contact_roommate'),
-
+    path('roommates/', views.roommates, name='roommates'), # roommates listing view
 ]
