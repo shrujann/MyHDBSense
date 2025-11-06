@@ -1,4 +1,11 @@
 <h2>Roommate Profile</h2>
+<button
+  type="button"
+  onclick="if (document.referrer) { history.back(); } else { window.location.href='{% url 'home' %}'; }"
+  style="margin-bottom: 1rem; padding:.5rem .75rem; border:1px solid #ccc; background:#fff; cursor:pointer; border-radius:6px;"
+>
+  ← Back
+</button>
 <form method="post">{% csrf_token %}
   {{ form.as_p }}
   <p>
