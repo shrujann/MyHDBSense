@@ -1,0 +1,726 @@
+{% load static %}
+{% url 'results' as results_url %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>MyHDBSense | Amenities</title>
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <style>
+    :root{
+      --pane-h: 560px;
+      --border:#e9edf2;
+      --card-r:16px;
+      --chip-dark:#0b0d14;
+      --brand:#0d6efd;
+    }
+
+    body{ background:#f7f8fb; }
+
+    .mhs-card{
+      background:#fff; border:1px solid var(--border); border-radius:var(--card-r);
+      box-shadow:0 6px 16px rgba(10,31,68,.06);
+    }
+    .location-panel .form-control{ border-radius:12px; padding:.75rem .95rem; }
+
+    /* Category strip */
+    .filter-strip{
+      display:flex; gap:14px; overflow-x:auto; padding:6px 2px 8px;
+      scroll-snap-type:x mandatory;
+    }
+    .filter-chip{
+      flex:0 0 230px; max-width:230px; min-height:110px;
+      background:#fff; border:1px solid var(--border); border-radius:14px;
+      box-shadow:0 6px 14px rgba(10,31,68,.06);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px; text-align:center; cursor:pointer; user-select:none; scroll-snap-align:start;
+      transition:transform .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease, border-color .12s ease;
+    }
+    .filter-chip .bi{ font-size:22px; opacity:.9; }
+    .filter-chip .name{ font-weight:700; font-size:.98rem; }
+    .filter-chip .count{ background:#eef2f6; color:#111; border-radius:999px; padding:3px 10px; font-weight:700; font-size:.86rem; min-width:42px; text-align:center; }
+    .filter-chip:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(10,31,68,.10); }
+    .filter-chip.active{ background:var(--chip-dark); color:#fff; border-color:var(--chip-dark); }
+    .filter-chip.active .count{ background:#1f2430; color:#fff; }
+
+    /* Map + Nearby equal height */
+    .map-card, .nearby-card{
+      height:var(--pane-h);
+      display:flex; flex-direction:column;
+      background:#fff; border:1px solid var(--border); border-radius:var(--card-r);
+      box-shadow:0 6px 16px rgba(10,31,68,.06);
+    }
+    .map-head, .nearby-head{
+      padding:10px 14px; display:flex; align-items:center; justify-content:space-between;
+      border-bottom:1px solid var(--border);
+    }
+    .map-head .title, .nearby-head .title{ font-weight:700; font-size:1rem; margin:0; }
+
+    /* Map */
+    #map{
+      flex:1;
+      border-radius:0 0 var(--card-r) var(--card-r);
+      height:100%;
+      min-height:420px;
+      min-width:100%;
+    }
+
+    .recenter-pill{
+      background:#fff; border:1px solid var(--border); border-radius:999px; padding:7px 12px; font-size:.92rem;
+      display:inline-flex; align-items:center; gap:8px; box-shadow:0 6px 16px rgba(10,31,68,.08);
+    }
+    .legend{
+      position:absolute; left:14px; bottom:14px; z-index:400;
+      background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px 12px;
+      box-shadow:0 6px 16px rgba(10,31,68,.08); font-size:.92rem;
+    }
+    .legend .dot{ width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:8px; }
+    .dot-green{ background:#16a34a; }
+
+    .nearby-body{ flex:1; overflow:auto; padding:14px; }
+    .nearby-item{
+      background:#fff; border:1px solid var(--border); border-radius:14px; padding:16px 14px;
+      box-shadow:0 6px 14px rgba(10,31,68,.06); cursor:pointer;
+      transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .nearby-item:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(10,31,68,.10); border-color:#dfe6ee; }
+    .nearby-item .title{ font-weight:800; font-size:1.02rem; line-height:1.2; color:#0b0d14; }
+    .nearby-item .addr{ font-size:.95rem; color:#4b5563; }
+    .nearby-item .meta{ font-size:.92rem; color:#101828; display:flex; gap:16px; flex-wrap:wrap; }
+
+    @media (max-width: 991.98px){
+      :root{ --pane-h: 440px; }
+      .filter-chip{ flex-basis:210px; max-width:210px; }
+    }
+
+    /* Contribute cards */
+    .contrib-card{
+      background:#fff; border:1px dashed var(--border); border-radius:14px; padding:18px 16px;
+      box-shadow:0 6px 14px rgba(10,31,68,.04);
+      transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .contrib-card:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(10,31,68,.08); border-color:#dfe6ee; }
+
+    /* Modals */
+    .mhs-modal .modal-content{ border-radius:16px; overflow:hidden; }
+    .mhs-modal .modal-head{ border-bottom:1px solid var(--border); background:var(--brand); color:#fff; }
+    .mhs-modal .btn-light{ background:#ffffff; }
+    .modal-body-scroll{ max-height:72vh; overflow:auto; }
+
+    /* Contributions (cards pulled from results.html) */
+    .contrib-toolbar{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+      padding:10px 12px; background:#f5f7ff; border:1px solid #e6ebff; border-radius:12px; margin-bottom:12px;
+    }
+    .contrib-toolbar .form-control{ border-radius:10px; }
+    .thread{
+      border:1px solid var(--border); border-radius:14px; padding:16px; background:#fff;
+      box-shadow:0 6px 12px rgba(10,31,68,.04); margin-bottom:14px;
+    }
+    .thread-title{ font-size:1rem; font-weight:800; color:#111; margin-bottom:4px; text-transform:capitalize; }
+    .thread-title:empty{ display:none; }
+    .thread-meta{ font-size:.9rem; color:#475467; margin-bottom:6px; }
+    .thread-content{ font-size:.96rem; color:#111; }
+
+    .vote-form{ display:flex; justify-content:flex-end; margin-top:10px; }
+    .vote-bubble{
+      display:inline-flex; align-items:center; gap:8px;
+      background:#eef2ff; border:1px solid #d9e0ff; border-radius:999px; padding:6px 10px;
+    }
+    .vote-form button{
+      background:#ffffff; border:1px solid #cbd5ff; border-radius:8px; padding:4px 8px; cursor:pointer;
+      line-height:1; display:inline-flex; align-items:center; gap:6px;
+    }
+    .vote-form button:hover{ background:#f0f3ff; }
+    .vote-form button svg{ width:18px; height:18px; }
+    .vote-count{ min-width:20px; text-align:center; font-weight:700; color:#111; }
+
+    /* Inline spinner */
+    .inline-spinner{ display:flex; align-items:center; gap:10px; padding:16px; color:#555; }
+  </style>
+</head>
+<body class="bg-light">
+
+  {% include "accounts/navbar.html" %}
+
+  <main class="container py-4">
+    <header class="mb-3">
+      <h2 class="mb-1">Amenities Explorer</h2>
+      <p class="text-muted mb-0">Discover amenities around Singapore with distance-based filtering.</p>
+    </header>
+
+    <!-- Search -->
+    <section class="mhs-card p-3 p-md-4 mb-4 location-panel">
+      <div class="d-flex align-items-start gap-2 mb-2">
+        <i class="bi bi-geo-alt fs-5 text-secondary"></i>
+        <div>
+          <div class="fw-semibold">Enter Your Singapore Location</div>
+          <div class="text-muted small">Enter a postal code to see amenities within 1.5 km.</div>
+        </div>
+      </div>
+
+      <form class="row g-2 align-items-center" method="get" action="{% url 'search_amenities' %}">
+        <div class="col-lg-10">
+          <label class="form-label small text-muted">Postal Code</label>
+          <input name="q" class="form-control" placeholder="e.g. 310190" required>
+        </div>
+        <div class="col-6 col-lg-2 d-grid">
+          <label class="form-label opacity-0">.</label>
+          <button class="btn btn-dark" type="submit"><i class="bi bi-search me-2"></i>Search</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Filter by Category -->
+    <section class="mhs-card p-3 p-md-4 mb-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <i class="bi bi-funnel"></i><span class="fw-semibold">Filter by Category</span>
+      </div>
+      <div id="catStrip" class="filter-strip">
+        <button type="button" class="filter-chip active" data-cat="All">
+          <i class="bi bi-geo-alt"></i><div class="name">All</div><div class="count" data-count-for="All">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="School">
+          <i class="bi bi-mortarboard"></i><div class="name">School</div><div class="count" data-count-for="School">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="Eldercare">
+          <i class="bi bi-heart-pulse"></i><div class="name">Eldercare</div><div class="count" data-count-for="Eldercare">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="MRT Station">
+          <i class="bi bi-train-front"></i><div class="name">MRT Station</div><div class="count" data-count-for="MRT Station">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="Library">
+          <i class="bi bi-book"></i><div class="name">Library</div><div class="count" data-count-for="Library">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="CHAS Clinic">
+          <i class="bi bi-hospital"></i><div class="name">CHAS Clinic</div><div class="count" data-count-for="CHAS Clinic">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="Hawker Centre">
+          <i class="bi bi-shop"></i><div class="name">Hawker Centre</div><div class="count" data-count-for="Hawker Centre">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="Tourism">
+          <i class="bi bi-camera"></i><div class="name">Tourism</div><div class="count" data-count-for="Tourism">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="Preschool">
+          <i class="bi bi-emoji-smile"></i><div class="name">Preschool</div><div class="count" data-count-for="Preschool">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="Childcare">
+          <i class="bi bi-people"></i><div class="name">Childcare</div><div class="count" data-count-for="Childcare">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="Gym">
+          <i class="bi bi-activity"></i><div class="name">Gym</div><div class="count" data-count-for="Gym">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="SportSG">
+          <i class="bi bi-trophy"></i><div class="name">SportSG</div><div class="count" data-count-for="SportSG">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="Park">
+          <i class="bi bi-tree"></i><div class="name">Park</div><div class="count" data-count-for="Park">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="Market Centre">
+          <i class="bi bi-basket"></i><div class="name">Market Centre</div><div class="count" data-count-for="Market Centre">0</div>
+        </button>
+        <button type="button" class="filter-chip" data-cat="Supermarket">
+          <i class="bi bi-bag-check"></i><div class="name">Supermarket</div><div class="count" data-count-for="Supermarket">0</div>
+        </button>
+      </div>
+    </section>
+
+    <!-- Map + Nearby -->
+    <section class="row g-3 mb-4">
+      <div class="col-lg-8">
+        <div class="map-card position-relative">
+          <div class="map-head">
+            <h6 class="title mb-0">Interactive Singapore Map</h6>
+            <button id="recenterBtn" class="recenter-pill"><i class="bi bi-arrow-counterclockwise"></i> Recenter</button>
+          </div>
+          <div id="map"></div>
+          <div class="legend">
+            <div><span class="dot dot-green"></span>Amenities</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="nearby-card">
+          <div class="nearby-head">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-geo"></i>
+              <div>
+                <h6 class="title mb-0">Nearby Amenities <span id="nearCount" class="text-muted">(0)</span></h6>
+                <div class="text-muted small">Within 1.5 km of your location</div>
+              </div>
+            </div>
+          </div>
+          <div class="nearby-body">
+            <div id="nearbyList" class="d-flex flex-column gap-3"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contribute -->
+    <section class="mhs-card p-3 p-md-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <i class="bi bi-plus-lg"></i><span class="fw-semibold">Contribute to Our Community Database</span>
+      </div>
+      <div class="text-muted mb-3">Help fellow residents by adding missing amenities or viewing community submissions.</div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <button class="contrib-card h-100 w-100 text-start text-md-center"
+                  data-bs-toggle="modal" data-bs-target="#addAmenityModal">
+            <div class="text-success mb-2" style="font-size:38px; line-height:1">+</div>
+            <div class="fw-semibold">Add New Amenity</div>
+            <div class="text-muted small">Report missing location</div>
+          </button>
+        </div>
+        <div class="col-md-6">
+          <button id="openContribBtn" class="contrib-card h-100 w-100 text-start text-md-center"
+                  data-bs-toggle="modal" data-bs-target="#viewContribModal">
+            <div class="text-primary mb-2"><i class="bi bi-chat-dots"></i></div>
+            <div class="fw-semibold">View Contributions</div>
+            <div class="text-muted small">Upvote user-submitted requests</div>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Server data (may be absent on first load) -->
+  {{ amenities|json_script:"amenities-data" }}
+  <script>
+    window.MHS_CENTER = {
+      lat: (function(v){ var n=parseFloat(v); return isNaN(n)? 1.3521 : n; })("{{ center_lat|default:1.3521 }}"),
+      lng: (function(v){ var n=parseFloat(v); return isNaN(n)?103.8198 : n; })("{{ center_lng|default:103.8198 }}")
+    };
+  </script>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- ADD AMENITY MODAL -->
+  <div class="modal fade mhs-modal" id="addAmenityModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:560px;">
+      <div class="modal-content">
+        <div class="modal-head p-3 px-4 d-flex align-items-center justify-content-between">
+          <div>
+            <h5 class="fw-bold mb-0">Add New Amenity</h5>
+            <div class="small opacity-75">Submit to admin for approval</div>
+          </div>
+          <button class="btn btn-sm btn-light opacity-75" data-bs-dismiss="modal" aria-label="Close">
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+        <form id="addAmenityForm" class="p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Amenity Name *</label>
+            <input class="form-control" name="name" placeholder="e.g., ABC Clinic, XYZ Mall" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Category *</label>
+            <select class="form-select" name="category" required></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Address *</label>
+            <input class="form-control" name="address" placeholder="Full Singapore address" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Description</label>
+            <textarea class="form-control" rows="3" name="description" placeholder="Brief description of the amenity"></textarea>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold small">Operating Hours</label>
+            <input class="form-control" name="operatingHours" placeholder="e.g., 9:00 AM - 6:00 PM">
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-dark flex-fill" type="submit">Submit for Approval</button>
+            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW CONTRIBUTIONS MODAL -->
+  <div class="modal fade mhs-modal" id="viewContribModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-head p-3 px-4 d-flex align-items-center justify-content-between">
+          <div>
+            <h5 class="fw-bold mb-0">View Contributions</h5>
+            <div class="small opacity-75">Browse and upvote user-submitted requests</div>
+          </div>
+          <button class="btn btn-sm btn-light opacity-75" data-bs-dismiss="modal" aria-label="Close">
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+        <div class="p-3">
+          <!-- Toolbar -->
+          <div class="contrib-toolbar">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-chat-dots"></i>
+              <strong>Community Contributions</strong>
+            </div>
+            <div class="d-flex gap-2">
+              <button id="refreshContrib" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-clockwise me-1"></i>Refresh</button>
+            </div>
+          </div>
+
+          <!-- Dynamic list -->
+          <div id="contribBody" class="modal-body-scroll">
+            <div class="inline-spinner">
+              <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+              <span>Loading contributions…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ========= CONFIG ========= */
+    const RADIUS_KM = 1.5;
+    const ICONS = {
+      "All":"bi-geo-alt","School":"bi-mortarboard","Eldercare":"bi-heart-pulse",
+      "MRT Station":"bi-train-front","Library":"bi-book","CHAS Clinic":"bi-hospital",
+      "Hawker Centre":"bi-shop","Tourism":"bi-camera","Preschool":"bi-emoji-smile",
+      "Childcare":"bi-people","Gym":"bi-activity","SportSG":"bi-trophy",
+      "Park":"bi-tree","Market Centre":"bi-basket","Supermarket":"bi-bag-check"
+    };
+
+    /* ========= SAFE DATA LOAD ========= */
+    let RAW = [];
+    (function(){
+      const el = document.getElementById("amenities-data");
+      if(el){
+        try{ RAW = JSON.parse(el.textContent || "[]"); }
+        catch{ RAW = []; }
+      }
+    })();
+
+    /* ========= HELPERS ========= */
+    function haversineKm(a, b){
+      if(!a || !b || isNaN(a.lat) || isNaN(a.lng) || isNaN(b.lat) || isNaN(b.lng)) return Infinity;
+      const toRad = d => d*Math.PI/180;
+      const R=6371, dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
+      const x = Math.sin(dLat/2)**2 + Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
+      return 2*R*Math.asin(Math.sqrt(x));
+    }
+    function markerDiv(iconClass, color){
+      const bg = color || '#2563eb';
+      return L.divIcon({
+        html: `<div style="background:${bg};width:28px;height:28px;border-radius:50%;
+                        display:flex;align-items:center;justify-content:center;color:#fff;border:2px solid #fff;">
+                 <i class="bi ${iconClass}"></i>
+               </div>`,
+        iconSize:[28,28],
+        className:'shadow-sm'
+      });
+    }
+
+    /* ========= SMART TITLE CASE ========= */
+    const ACRONYMS = ['MRT','LRT','HDB','CPF','NLB','NTU','NUS','SMU','SUTD'];
+    const KEEP_LOWER = ['of','and','the','at','to','in','on','for','by','vs','via','from','a','an'];
+    function toTitleCaseSmart(str){
+      if(!str) return '';
+      let s = String(str).replace(/\s+/g,' ').trim();
+      let words = s.toLowerCase().split(' ').map((w,i,arr)=>{
+        if(ACRONYMS.includes(w.toUpperCase())) return w.toUpperCase();
+        const edge = (i===0 || i===arr.length-1);
+        if(!edge && KEEP_LOWER.includes(w)) return w;
+        return w.charAt(0).toUpperCase()+w.slice(1);
+      }).join(' ');
+      return words
+        .replace(/\bBlk\b/gi,'BLK').replace(/\bLor\b/gi,'Lor').replace(/\bJln\b/gi,'Jln')
+        .replace(/\bRd\b/gi,'Rd').replace(/\bSt\b/gi,'St').replace(/\bAve\b/gi,'Ave');
+    }
+    const prettyName = v => toTitleCaseSmart(v||'');
+    const prettyAddr = v => toTitleCaseSmart(v||'');
+
+    /* ========= NORMALIZE ========= */
+    const CENTER = { lat: Number(window.MHS_CENTER.lat), lng: Number(window.MHS_CENTER.lng) };
+    const ALL = (RAW||[]).map(a => {
+      const lat = (a.latitude!=null)? Number(a.latitude): null;
+      const lng = (a.longitude!=null)? Number(a.longitude): null;
+      const has = (lat!=null && !isNaN(lat) && lng!=null && !isNaN(lng));
+      const dist = (typeof a.distance === "number") ? a.distance : (has ? haversineKm(CENTER, {lat, lng}) : null);
+      const rawName = a.name || 'Amenity';
+      const rawAddr = a.address || '';
+      return {
+        id: a.id || `${(a.type||'Amenity')}_${rawName}_${a.postal_code||''}`.replace(/\s+/g,'_'),
+        name: prettyName(rawName),
+        type: a.type || 'Amenity',
+        address: prettyAddr(rawAddr),
+        postal_code: a.postal_code || '',
+        latitude: has ? lat : null,
+        longitude: has ? lng : null,
+        distance: (dist != null ? Math.round(dist*100)/100 : null),
+      };
+    });
+    const WITHIN = ALL.filter(a => a.distance != null && a.distance <= RADIUS_KM);
+
+    /* ========= MAP INIT ========= */
+    const map = L.map('map').setView([1.3521, 103.8198], 12);
+
+    (function addBaseLayers(){
+      const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap'
+      });
+      const oneMap = L.tileLayer('https://maps-{s}.onemap.sg/v3/Default/{z}/{x}/{y}.png', {
+        maxZoom: 18, minZoom: 11
+      });
+      osm.on('tileerror', ()=>{ if(!map.hasLayer(oneMap)) oneMap.addTo(map); });
+      osm.addTo(map);
+
+      // Center marker & radius
+      const homeIcon = markerDiv('bi-house-fill', '#0b0d14');
+      const centerMarker = L.marker([CENTER.lat, CENTER.lng], { icon:homeIcon }).addTo(map)
+        .bindPopup("Your selected location");
+      L.circle([CENTER.lat, CENTER.lng], {
+        radius: 1500, color: "#2563eb", fillColor:"#cce5ff", fillOpacity:.2
+      }).addTo(map);
+
+      const btn = document.getElementById('recenterBtn');
+      if(btn){
+        btn.addEventListener('click', ()=>{
+          map.setView([CENTER.lat, CENTER.lng], 15);
+          centerMarker.openPopup();
+        });
+      }
+
+      setTimeout(()=> map.invalidateSize(), 0);
+    })();
+
+    const markers = new Map();
+    function clearMarkers(){ markers.forEach(m => map.removeLayer(m)); markers.clear(); }
+    function addAmenityMarker(a){
+      if(a.latitude == null || a.longitude == null) return;
+      const iconClass = ICONS[a.type] || "bi-geo-alt";
+      const m = L.marker([a.latitude, a.longitude], { icon: markerDiv(iconClass, '#16a34a') }).addTo(map);
+      m.bindPopup(`
+        <div class="small">
+          <div class="fw-semibold">${a.name}</div>
+          <div class="text-muted">${a.type}${a.distance!=null ? ' • ' + a.distance + ' km' : ''}</div>
+          ${a.address ? `<div class="mt-1">${a.address}</div>` : ''}
+          ${a.postal_code ? `<div class="text-muted">S(${a.postal_code})</div>` : ''}
+        </div>
+      `, { offset:[0,-8] });
+      markers.set(a.id, m);
+    }
+    function focusMarker(id){
+      const m = markers.get(id);
+      if(!m) return;
+      map.setView(m.getLatLng(), 16, { animate:true });
+      m.openPopup();
+    }
+
+    /* ========= CATEGORIES ========= */
+    let SELECTED = "All";
+    function updateCategoryCounts(){
+      const counts = WITHIN.reduce((m,a)=>((m[a.type]=(m[a.type]||0)+1), m), {});
+      const total = WITHIN.length;
+      Object.keys(ICONS).forEach(key=>{
+        const span = document.querySelector(`.count[data-count-for="${CSS.escape(key)}"]`);
+        if(!span) return;
+        span.textContent = (key==="All") ? total : (counts[key] || 0);
+      });
+    }
+    function bindCategoryClicks(){
+      document.querySelectorAll('#catStrip .filter-chip').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          document.querySelectorAll('#catStrip .filter-chip').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          SELECTED = btn.getAttribute('data-cat');
+          applyFilter();
+        });
+      });
+    }
+
+    /* ========= LIST RENDER ========= */
+    function applyFilter(){
+      const list = (SELECTED === "All")
+        ? WITHIN.slice()
+        : WITHIN.filter(a => a.type === SELECTED);
+      list.sort((a,b)=> (a.distance ?? 9e9) - (b.distance ?? 9e9));
+
+      document.getElementById('nearCount').textContent = `(${list.length})`;
+      renderNearby(list);
+
+      clearMarkers();
+      list.forEach(addAmenityMarker);
+    }
+    function renderNearby(items){
+      const box = document.getElementById('nearbyList');
+      if(items.length === 0){
+        box.innerHTML = `<div class="text-muted small">No amenities found within 1.5 km for this category.</div>`;
+        return;
+      }
+      box.innerHTML = items.map(a=>{
+        const ico = ICONS[a.type] || "bi-geo-alt";
+        const dist = (a.distance!=null) ? `${a.distance} km` : 'n/a';
+        const addr = a.address ? a.address : (a.postal_code ? 'S('+a.postal_code+')' : '');
+        return `
+          <div class="nearby-item" data-id="${a.id}">
+            <div class="d-flex">
+              <div class="me-3 mt-1 fs-5"><i class="bi ${ico}"></i></div>
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="title">${a.name}</div>
+                </div>
+                <div class="addr">${addr}</div>
+                <div class="meta mt-1">
+                  <span><i class="bi bi-geo-alt me-1"></i>${dist}</span>
+                  <span class="badge bg-light text-dark">${a.type}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      box.querySelectorAll('.nearby-item').forEach(el=>{
+        el.addEventListener('click',()=>focusMarker(el.getAttribute('data-id')));
+      });
+    }
+
+    /* ========= CONTRIBUTE: populate selects ========= */
+    function populateCategorySelects(){
+      const catSelect = document.querySelector('#addAmenityForm select[name="category"]');
+      if(catSelect){
+        catSelect.innerHTML = Object.keys(ICONS)
+          .filter(k => k!=="All")
+          .map(k => `<option value="${k}">${k}</option>`).join('');
+      }
+    }
+
+    document.getElementById('addAmenityForm')?.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const modal = bootstrap.Modal.getInstance(document.getElementById('addAmenityModal'));
+      modal?.hide();
+      alert('Your amenity submission has been recorded for approval (demo).');
+    });
+
+    /* ========= VIEW CONTRIBUTIONS (fetch + inject, with search & upvote) ========= */
+    const resultsUrl = "{{ results_url }}";
+
+    function attachVoteHandlers(root){
+      const voteForms = root.querySelectorAll('.vote-form');
+      voteForms.forEach(form=>{
+        form.addEventListener('submit', function(e){
+          e.preventDefault();
+          const button = form.querySelector('button[type="submit"]');
+          const voteCountEl = form.querySelector('.vote-count');
+          button.disabled = true;
+
+          const formData = new FormData(form);
+          const url = form.action;
+          const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+          fetch(url, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              ...(csrfToken ? {'X-CSRFToken': csrfToken} : {})
+            }
+          })
+          .then(resp => {
+            if(!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+          })
+          .then(data => {
+            if(voteCountEl && typeof data.upvoteCount !== 'undefined'){
+              voteCountEl.textContent = data.upvoteCount;
+            }
+            button.textContent = 'Voted';
+          })
+          .catch(err => {
+            console.error(err);
+            button.disabled = false;
+            button.textContent = 'Vote';
+          });
+        });
+      });
+    }
+
+    function buildToolbarIfNeeded(){
+      // already in template, nothing to build – but keep hook if needed
+    }
+
+    function populateContribListFromDoc(doc){
+      const body = document.getElementById('contribBody');
+      const threads = doc.querySelectorAll('.thread');
+      if(!threads.length){
+        body.innerHTML = `<div class="alert alert-light border">No contributions available.</div>`;
+        return;
+      }
+      const html = Array.from(threads).map(t => t.outerHTML).join('');
+      body.innerHTML = html;
+
+      // Attach upvote AJAX
+      attachVoteHandlers(body);
+
+      // Wire search
+      const search = document.getElementById('contribSearch');
+      if(search){
+        search.oninput = () => {
+          const q = search.value.trim().toLowerCase();
+          body.querySelectorAll('.thread').forEach(card=>{
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(q) ? '' : 'none';
+          });
+        };
+      }
+    }
+
+    function loadContributions(){
+      const body = document.getElementById('contribBody');
+      body.innerHTML = `
+        <div class="inline-spinner">
+          <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+          <span>Loading contributions…</span>
+        </div>`;
+
+      fetch(resultsUrl, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(r => { if(!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        buildToolbarIfNeeded();
+        populateContribListFromDoc(doc);
+      })
+      .catch(err => {
+        console.error(err);
+        body.innerHTML = `<div class="alert alert-warning m-0">Unable to load contributions right now.</div>`;
+      });
+    }
+
+    const contribModalEl = document.getElementById('viewContribModal');
+    contribModalEl.addEventListener('shown.bs.modal', loadContributions);
+    document.getElementById('refreshContrib').addEventListener('click', loadContributions);
+
+    /* ========= BOOT ========= */
+    document.addEventListener('DOMContentLoaded', () => {
+      bindCategoryClicks();
+      updateCategoryCounts();
+      applyFilter();
+      populateCategorySelects();
+    });
+  </script>
+</body>
+</html>

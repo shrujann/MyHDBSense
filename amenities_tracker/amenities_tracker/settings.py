@@ -90,6 +90,7 @@ AUTH_USER_MODEL = 'accounts.CustomUser'
 
 # Email backend configuration for OTP
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # during development, prints emails to console.
+DEFAULT_FROM_EMAIL = "noreply@myhdbsense.com"
 
 # Session management
 SESSION_EXIRE_AT_BROWSER_CLOSE = True  # session expires when browser is closed
@@ -98,6 +99,8 @@ SESSION_EXIRE_AT_BROWSER_CLOSE = True  # session expires when browser is closed
 ONEMAP_EMAIL = "shrujan.tech@gmail.com"
 ONEMAP_PASSWORD = "SWEProject2025$"
 
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/'
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

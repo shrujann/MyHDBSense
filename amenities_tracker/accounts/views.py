@@ -1,96 +1,149 @@
 from django.db.models import Q
 from .models import RoommateProfile, ContactAttempt, CustomUser
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, login
 from django.core.mail import send_mail
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django_otp.plugins.otp_email.models import EmailDevice
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from .forms import RoommateProfileForm, SharingRequestForm, ContactMessageForm, OTPForm, CustomUserCreationForm, LoginForm
 from .models import CustomUser
+from urllib.parse import quote as urlquote, urlparse
 from . import services
 
-# registeration view
+def _back_with_query(request, default_name="home"):
+    ref = request.META.get("HTTP_REFERER")
+    if not ref:
+        ref = reverse(default_name)
+    return ref + ("&" if "?" in ref else "?")
+
+# registration view
 def register(request):
     if request.method == "POST":
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.is_active = False  # prevent login until OTP verified
+            user.is_active = False
             user.save()
 
-            # create OTP email device
-            device = EmailDevice.objects.create(
-                user=user,
-                name="default",
-                confirmed=False
-            )
-            device.generate_challenge()  # this sends the OTP to the user’s email
+            device = EmailDevice.objects.create(user=user, name="default", confirmed=False)
+            device.generate_challenge() 
 
             return redirect("verify_otp", user_id=user.id)
-    else:
-        form = CustomUserCreationForm()
-    return render(request, "accounts/register.html", {"form": form})
+
+        errs = []
+        for field, field_errors in form.errors.items():
+            label = "Email" if field == "email" else ("Password" if field.startswith("password") else field.capitalize())
+            for e in field_errors:
+                errs.append(f"{label}: {e}")
+        msg = "Please fix the following:\n" + "\n".join(errs) if errs else "Please check the fields and try again."
+        messages.error(request, msg, extra_tags="reg")
+        return redirect(_back_with_query(request) + "showRegister=true")
+
+    return redirect(_back_with_query(request) + "showRegister=true")
 
 # view to setup 2FA via email
-
 def send_otp(user):
     device, created = EmailDevice.objects.get_or_create(user=user, name='default')
     device.generate_challenge()
 
 # verify OTP view
+User = get_user_model()
 
 def verify_otp(request, user_id):
-    user = get_object_or_404(CustomUser, id=user_id)  # get the user object or 404 if not found
-    device = EmailDevice.objects.filter(user=user, name="default").first()  # get the email device for the user
+    user = get_object_or_404(User, pk=user_id)
+    device = EmailDevice.objects.filter(user=user, name="default").first()
+
+    # resend
+    if request.GET.get("resend") == "1" and device:
+        device.generate_challenge()
+        messages.success(request, "A new code was sent to your email.", extra_tags="otp")
+        return redirect("verify_otp", user_id=user_id)
 
     if request.method == "POST":
-        form = OTPForm(request.POST)  # bind data to form
-        if form.is_valid():  # if the form is valid
-            otp = form.cleaned_data["otp"]  # get the OTP from the form
-            if device and device.verify_token(otp):  # verify the OTP
-                user.is_active = True  # activate the user
-                user.save()  # save the user to database
-                login(request, user)  # auto login after successful OTP verification
-                return redirect("home")  # Redirect to a success page.
-            else:
-                form.add_error("otp", "Invalid OTP. Please try again.")  # show error on the form
-    else:
-        form = OTPForm()
+        code = request.POST.get("otp", "").strip()
+        if device and device.verify_token(code):
+            device.confirmed = True
+            device.save()
+            user.is_active = True
+            user.save()
+            login(request, user)
+            return redirect("home")
+        messages.error(request, "Invalid or expired code. Try again.", extra_tags="otp")
+        return redirect("verify_otp", user_id=user_id)
 
-    return render(request, "accounts/verify_otp.html", {"form": form})  # render the OTP verification form
-
+    return render(request, "accounts/verify_otp.html", {"user_id": user_id})
 
 # Log in view
 def login_view(request):
     if request.method == "POST":
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data["username"]
-            password = form.cleaned_data["password"]
-            user = authenticate(request, username=username, password=password)
+        username = (request.POST.get("username") or "").strip()
+        password = request.POST.get("password") or ""
 
-            if user is not None:
-                login(request, user)
-                return redirect("home")  # Redirect to a success page.
-            else:
-                form.add_error(None, "Invalid username or password.")
-    else:
-        form = LoginForm()
-    return render(request, "accounts/login.html", {"form": form})
+        next_url = (
+            request.POST.get("next")
+            or request.session.pop("post_login_next", None)
+            or reverse("home")
+        )
+
+        if not username or not password:
+            messages.error(request, "Please enter both email and password.", extra_tags="auth")
+            home = reverse("home")
+            return redirect(f"{home}?showLogin=true&next={urlquote(next_url)}")
+
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect(next_url)
+
+        messages.error(request, "Invalid username or password.", extra_tags="auth")
+        home = reverse("home")
+        return redirect(f"{home}?showLogin=true&next={urlquote(next_url)}")
+
+    next_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or reverse("home")
+    request.session["post_login_next"] = next_url  
+    home = reverse("home")
+    return redirect(f"{home}?showLogin=true&next={urlquote(next_url)}")
 
 # Logout view
 def logout_view(request):
     logout(request)
     return redirect("login")  # Redirect to login page after logout
 
+def password_reset_modal(request):
+    if request.method == "POST":
+        form = PasswordResetForm(request.POST)
+        if form.is_valid():
+            # Sends email if account with that email exists.
+            form.save(
+                request=request,
+                use_https=request.is_secure(),
+                email_template_name="registration/password_reset_email.html",  
+            )
+            messages.success(
+                request,
+                "If an account exists with that email, we’ve sent instructions to reset your password.",
+                extra_tags="auth" 
+            )
+            return redirect(_back_with_query(request) + "showLogin=true")
+        else:
+            err = form.errors.get("email")
+            msg = "Enter a valid email address."
+            if err:
+                msg = " ".join([e for e in err])
+            messages.error(request, msg, extra_tags="reset")
+            return redirect(_back_with_query(request) + "showReset=true")
+
+    return redirect(_back_with_query(request) + "showReset=true")
+
 # home view
 def home(request):
     return render(request, "accounts/home.html")  # render the home page
 
-# Retrieve ONEMAP Token
-
+@login_required
 # search for flats within 3km of postal code
 def search_flats(request):
     """
@@ -200,6 +253,7 @@ def contact_roommate(request, user_id):
     return render(request, "accounts/contact_roommate.html", {"form": form, "recipient": recipient})
 
 
+@login_required
 # ------ Amneities Tracker Views ------
 def search_amenities(request):
     postal_code = request.GET.get("q", "").strip()
@@ -228,18 +282,25 @@ def search_amenities(request):
         "filter_type": filter_type,
     }
     
-    return render(request, "accounts/amenities_results.html", context)
+    return render(request, "accounts/amenities.html", context)
                     
 
-#  home2 view for testing
-def home2(request):
+@login_required
+def amenities(request):
     if request.method == 'POST':
-        print(request.POST)  # Debug: see what's submitted
+        print(request.POST)  
         
-    return render(request, 'accounts/home2.html')
+    return render(request, 'accounts/amenities.html')
 
+@login_required
+def properties(request):
+    return render(request, 'accounts/properties.html')
 
-
+@login_required
+def roommates(request):
+    qs = RoommateProfile.objects.select_related("user").all().order_by("-is_looking", "-id")
+    form = SharingRequestForm()
+    return render(request, "accounts/roommates.html", {"profiles": qs, "form": form})
         
         
             

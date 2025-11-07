@@ -1,0 +1,364 @@
+{% load static %}
+{% url 'search_flats' as search_url %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MyHDBSense | Properties</title>
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root{ --border:#e9edf2; --card-r:16px; }
+    html{ overflow-y:scroll; }
+    body{ background:#f7f8fb; }
+
+    .recommended-box { background:#f7fbff; border-radius:.9rem; }
+    .mhs-img { height: 220px; width: 100%; object-fit: cover; border-top-left-radius:.6rem; border-top-right-radius:.6rem; }
+    .mhs-img-lg { height: 360px; width: 100%; object-fit: cover; }
+    .chip { font-size:.75rem; padding:.2rem .5rem; border-radius:1rem; background:#f1f3f5; }
+    .filter-holder, .recommended-holder, .list-holder { margin-top: 2.5rem; }
+    .pm-panel { background:#effaf1; border-radius:.8rem; }
+    .pm-score .progress { height:6px; }
+    .pm-score .progress-bar { background-color:#0d6efd; }
+
+    .search-card.mhs-card{
+      background:#fff; border:1px solid var(--border); border-radius:var(--card-r);
+      box-shadow:0 6px 16px rgba(10,31,68,.06);
+    }
+  </style>
+</head>
+<body>
+
+  {% include "accounts/navbar.html" %}
+
+  <main class="container py-4">
+
+    <!-- Heading -->
+    <header class="d-flex justify-content-between align-items-center">
+      <div>
+        <h2 class="mb-1">Search Results</h2>
+        <p class="text-muted mb-0">Found <span id="propertyCount">0</span> HDB properties matching your criteria</p>
+      </div>
+    </header>
+
+    <!-- Search bar -->
+    <section class="search-card mhs-card p-3 p-md-4 mt-4">
+      <div class="d-flex align-items-start gap-2 mb-2">
+        <i class="bi bi-geo-alt fs-5 text-secondary"></i>
+        <div>
+          <div class="fw-semibold">Enter Your Singapore Location</div>
+          <div class="text-muted small">Enter a postal code to see flats within 3 km.</div>
+        </div>
+      </div>
+
+      <form id="flatSearchForm" class="row g-2 align-items-center" method="get" action="{{ search_url }}">
+        <div class="col-lg-10">
+          <label class="form-label small text-muted">Postal Code</label>
+          <input name="q" class="form-control" placeholder="e.g. 310190" required>
+        </div>
+        <div class="col-6 col-lg-2 d-grid">
+          <label class="form-label opacity-0">.</label>
+          <button class="btn btn-dark" type="submit"><i class="bi bi-search me-2"></i>Search</button>
+        </div>
+      </form>
+
+      <div class="alert alert-light mt-3 border text-muted small mb-0">
+        <i class="bi bi-info-circle me-2"></i>
+        <b>Tip:</b> You can also paste a block + street (e.g., <em>10 EVERTON RD</em>). Exact match on 6-digit postal codes.
+      </div>
+    </section>
+
+    <!-- Search Filters (optional include slot) -->
+    <section class="filter-holder"></section>
+
+    <!-- Recommended top 3 (cheapest) -->
+    <section class="recommended-holder">
+      <div class="card border-0 shadow-sm recommended-box">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold mb-1">
+                <i class="bi bi-lightning-charge me-2 text-primary"></i> Recommended for You
+              </h5>
+              <p class="text-muted small mb-0">Properties that match your preferences and budget.</p>
+            </div>
+          </div>
+
+          <div id="featuredProperties" class="row g-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- All Listings -->
+    <section class="list-holder">
+      <h4 class="fw-bold mb-3">All Listings</h4>
+      <div id="allProperties" class="row g-4"></div>
+      <div id="emptyState" class="alert alert-light border text-muted small d-none mt-3" role="status" aria-live="polite">
+        No flats found within 3 km of that postal code.
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Property Details Modal -->
+  <div class="modal fade" id="propertyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down">
+      <div class="modal-content border-0">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold" id="pmTitle">HDB Listing</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body pt-0">
+
+          <!-- Carousel -->
+          <div id="pmCarousel" class="carousel slide mb-3">
+            <div class="carousel-inner rounded-3 overflow-hidden">
+              <div class="carousel-item active"><img id="pmImg1" class="d-block w-100 mhs-img-lg" alt=""></div>
+              <div class="carousel-item"><img id="pmImg2" class="d-block w-100 mhs-img-lg" alt=""></div>
+              <div class="carousel-item"><img id="pmImg3" class="d-block w-100 mhs-img-lg" alt=""></div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#pmCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#pmCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          </div>
+
+          <!-- Info panel -->
+          <div class="pm-panel p-3 mb-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-house-fill fs-4 text-success"></i>
+              <span class="fw-semibold">Information</span>
+              <span class="badge text-bg-light ms-2" id="pmType">HDB</span>
+              <span class="badge text-bg-light ms-2" id="pmFlatType">—</span>
+              <span class="badge text-bg-success ms-2 d-none" id="pmVerified"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
+            </div>
+            <h3 class="fw-bold mb-2" id="pmPrice">$—</h3>
+            <div class="row g-3 small text-muted">
+              <div class="col-6 col-md-3"><div>Price per sqm</div><div class="fw-semibold" id="pmPsf">—</div></div>
+              <div class="col-6 col-md-3"><div>Sqm</div><div class="fw-semibold" id="pmSqft">—</div></div>
+              <div class="col-6 col-md-3"><div>Lease remaining</div><div class="fw-semibold" id="pmLease">—</div></div>
+              <div class="col-6 col-md-3"><div>Town / Flat Model</div><div class="fw-semibold" id="pmTownModel">—</div></div>
+            </div>
+          </div>
+
+          <!-- Address -->
+          <div class="row g-3 mb-3">
+            <div class="col-12"><i class="bi bi-geo-alt me-1"></i><span id="pmAddress" class="fw-semibold">—</span></div>
+          </div>
+
+          <!-- Demo Amenity Score -->
+          <div class="pm-score rounded-3 p-3 border mb-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-star-fill text-warning"></i>
+              <span class="fw-semibold">Neighborhood Amenity Score</span>
+              <span class="badge bg-light text-dark ms-auto" id="pmScore">—</span>
+            </div>
+            <div class="small mb-1">Food & Dining <span class="float-end" id="pmScoreFD">8.5</span></div>
+            <div class="progress mb-2"><div class="progress-bar" id="pmBarFD"></div></div>
+            <div class="small mb-1">Transport <span class="float-end" id="pmScoreT">9.0</span></div>
+            <div class="progress mb-2"><div class="progress-bar" id="pmBarT"></div></div>
+            <div class="small mb-1">Recreation <span class="float-end" id="pmScoreR">8.0</span></div>
+            <div class="progress mb-2"><div class="progress-bar" id="pmBarR"></div></div>
+            <div class="small mb-1">Education <span class="float-end" id="pmScoreE">9.5</span></div>
+            <div class="progress"><div class="progress-bar" id="pmBarE"></div></div>
+            <div class="small text-muted mt-2">Score based on proximity and quality of amenities within 1km radius (demo).</div>
+          </div>
+
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    let PROPERTIES = [];
+    const UNIVERSAL_IMG = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=60";
+
+    /* ------------------ HELPERS ------------------ */
+    const money = n => (n==null? '—' : Number(n).toLocaleString('en-SG'));
+    const caps  = s => String(s||'').toLowerCase().replace(/\b\w/g, m=>m.toUpperCase());
+    const km    = n => (n==null? '—' : Number(n).toFixed(2));
+
+    function normFlat(r){
+      const area  = r.floor_area ? Number(r.floor_area) : null;
+      const price = r.resale_price ? Number(r.resale_price) : null;
+      return {
+        title: `${caps(r.flat_type||'Flat')} • ${caps(r.town||'')}`,
+        price,
+        priceLabel: price!=null ? '$' + money(price) : '—',
+        address: caps(r.street_name || ''),
+        sqft: area ? Math.round(area) : null,      // (sqm)
+        hdbFlatType: caps(r.flat_type||''),        // e.g. "4-Room"
+        propertyType: 'HDB',
+        verified: false,
+        purpose: 'sale',
+        region: caps(r.town||''),                  // e.g. "Toa Payoh"
+        remainingLease: r.remaining_lease || null,
+        distance: r.distance!=null ? Number(r.distance) : null,
+        images: [UNIVERSAL_IMG],
+        _raw: r
+      };
+    }
+
+    /* ------------------ RENDER ------------------ */
+    function cardHTML(p, idx){
+      const typeChip = p.hdbFlatType ? `<span class="chip me-1">${p.hdbFlatType}</span>` : "";
+      const purpose  = `<span class="chip me-1">For Sale</span>`;
+      return `
+        <div class="col-md-4">
+          <div class="card shadow-sm border-0 h-100">
+            <img src="${UNIVERSAL_IMG}" alt="${p.title}" class="card-img-top mhs-img">
+            <div class="card-body">
+              <div class="mb-2">${typeChip}${purpose}</div>
+              <h5 class="text-success fw-bold mb-1">${p.priceLabel}</h5>
+              <h6 class="mb-1">${p.title}</h6>
+              <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>${p.address}</p>
+              <p class="text-muted small mb-2">
+                ${p.sqft ? `<i class="bi bi-arrows-fullscreen me-1"></i>${p.sqft} sqm` : ''} 
+                ${p.distance!=null ? `<span class="ms-2"><i class="bi bi-geo me-1"></i>${km(p.distance)} km</span>` : ''}
+              </p>
+              <button class="btn btn-outline-dark w-100 rounded-pill" data-action="view-details" data-index="${idx}">
+                <i class="bi bi-eye me-1"></i> View Details
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLists(){
+      const list  = document.getElementById("allProperties");
+      const feat  = document.getElementById("featuredProperties");
+      const empty = document.getElementById("emptyState");
+
+      if (empty) empty.classList.add("d-none");
+
+      if(!PROPERTIES.length){
+        if (list) list.innerHTML = "";
+        if (feat) feat.innerHTML = "";
+        const cnt = document.getElementById("propertyCount");
+        if (cnt) cnt.textContent = "0";
+        if (empty) empty.classList.remove("d-none");
+        return;
+      }
+
+      const byPrice = PROPERTIES
+        .slice()
+        .filter(p => Number.isFinite(p.price))
+        .sort((a,b)=>a.price-b.price);
+      if (feat) feat.innerHTML = byPrice.slice(0,3).map((p,i)=>cardHTML(p,i)).join("");
+
+      if (list) list.innerHTML = PROPERTIES.map((p,i)=>cardHTML(p,i)).join("");
+      const cnt = document.getElementById("propertyCount");
+      if (cnt) cnt.textContent = String(PROPERTIES.length);
+
+      window.MHS_PROPERTIES = PROPERTIES;
+    }
+
+    /* ------------- FETCH + INJECT ------------- */
+    async function fetchResultsIntoPage(q){
+      const url = new URL("{{ search_url }}", window.location.origin);
+      url.searchParams.set('q', q);
+
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if(!res.ok) throw new Error('Failed to fetch results');
+
+      const htmlText = await res.text();
+      const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+
+      const script = doc.getElementById('flats-data');
+      let flats = [];
+      try{
+        flats = script ? JSON.parse(script.textContent || '[]') : [];
+      }catch(e){
+        console.warn('flats-data JSON parse failed:', e);
+        flats = [];
+      }
+
+      PROPERTIES = (flats || []).map(normFlat);
+      renderLists();
+    }
+
+    /* ------------------ FORM SUBMIT ------------------ */
+    (function wireSearch(){
+      const form = document.getElementById('flatSearchForm');
+      if(!form) return;
+      form.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const q = (form.q?.value || '').trim();
+        if(!q) return;
+        try{
+          await fetchResultsIntoPage(q);
+        }catch(err){
+          console.error(err);
+          PROPERTIES = [];
+          renderLists();
+          alert('Failed to load results. Try again.');
+        }
+      });
+    })();
+
+    /* ---------------- MODAL POPULATE ------------------ */
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action='view-details']");
+      if (!btn) return;
+      const i = Number(btn.getAttribute("data-index"));
+      const item = (window.MHS_PROPERTIES || [])[i];
+      if (!item) return;
+      populatePropertyModal(item);
+      new bootstrap.Modal(document.getElementById("propertyModal")).show();
+    });
+
+    function populatePropertyModal(p) {
+      document.getElementById("pmTitle").textContent = p.title || 'HDB Listing';
+      document.getElementById("pmType").textContent = p.propertyType || "HDB";
+      document.getElementById("pmFlatType").textContent = p.hdbFlatType || "—";
+      document.getElementById("pmVerified").classList.add("d-none");
+
+      document.getElementById("pmImg1").src = UNIVERSAL_IMG;
+      document.getElementById("pmImg2").src = UNIVERSAL_IMG;
+      document.getElementById("pmImg3").src = UNIVERSAL_IMG;
+
+      document.getElementById("pmPrice").textContent = p.price!=null ? '$'+money(p.price) : '—';
+      const psqm = (p.price!=null && p.sqft) ? (p.price / p.sqft) : null;
+      document.getElementById("pmPsf").textContent   = psqm!=null ? '$'+Number(psqm).toLocaleString('en-SG') : '—';
+      document.getElementById("pmSqft").textContent  = p.sqft != null ? p.sqft : "—";
+      document.getElementById("pmLease").textContent = p.remainingLease || "—";
+      document.getElementById("pmAddress").textContent = p.address || "—";
+
+      /* ✅ The missing line: fill "Town / Flat Model" */
+      document.getElementById("pmTownModel").textContent =
+        [p.region, p.hdbFlatType].filter(Boolean).join(" / ") || "—";
+
+      const ns = 8.7;
+      document.getElementById("pmScore").textContent = `${ns.toFixed(1)}/10`;
+      setBar("pmBarFD","85%"); document.getElementById("pmScoreFD").textContent="8.5";
+      setBar("pmBarT","90%");  document.getElementById("pmScoreT").textContent="9.0";
+      setBar("pmBarR","80%");  document.getElementById("pmScoreR").textContent="8.0";
+      setBar("pmBarE","95%");  document.getElementById("pmScoreE").textContent="9.5";
+    }
+    function setBar(id, w){ const el=document.getElementById(id); if(el) el.style.width=w; }
+
+    // Initial empty render
+    renderLists();
+  </script>
+</body>
+</html>
