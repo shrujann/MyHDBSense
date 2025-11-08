@@ -1627,3 +1627,116 @@ def amenities_score(amenity_list, categories):
     # Score percent (as float, for 0-1 or 0-100 scale)
     percent = total / len(categories) if categories else 0
     return score_dict, total, percent
+
+from decimal import Decimal, ROUND_HALF_UP
+import math
+
+
+class CalculatorService:
+    """Service class for HDB affordability calculations"""
+    
+    # Interest rates
+    HDB_ANNUAL_RATE = 0.026  # HDB loan rate ~2.6%
+    BANK_ANNUAL_RATE = 0.042  # Bank loan rate ~4.2%
+    
+    # Ratios
+    MSR_RATIO = 0.30  # Mortgage Servicing Ratio (30%)
+    TDSR_RATIO = 0.55  # Total Debt Servicing Ratio (55%)
+    CPF_MONTHLY_RATIO = 0.20  # CPF monthly contribution (~20% of salary)
+    
+    # Down payment rates
+    HDB_DOWN_PAYMENT = 0.20  # 20% for HDB
+    BANK_DOWN_PAYMENT = 0.25  # 25% for bank loan
+
+    @staticmethod
+    def present_value_from_payment(payment, rate, periods):
+        """Calculate present value from monthly payment (loan amount from payment)"""
+        if rate <= 0:
+            return payment * periods
+        return payment * (1 - math.pow(1 + rate, -periods)) / rate
+
+    @staticmethod
+    def payment_from_present_value(present_value, rate, periods):
+        """Calculate monthly payment from loan amount"""
+        if rate <= 0:
+            return present_value / periods
+        return present_value * rate / (1 - math.pow(1 + rate, -periods))
+
+    @classmethod
+    def calculate_affordability(cls, income, expenses, cpf_balance, cash_balance, property_type, tenure_years):
+        """
+        Main affordability calculation method
+        
+        Args:
+            income (float): Monthly gross income in SGD
+            expenses (float): Monthly expenses in SGD
+            cpf_balance (float): CPF OA balance in SGD
+            cash_balance (float): Available cash for down payment in SGD
+            property_type (str): 'HDB_20' or 'BANK_25'
+            tenure_years (int): Loan tenure in years
+        
+        Returns:
+            dict: Calculation results
+        """
+        # Get rates based on property type
+        if property_type == "BANK_25":
+            down_payment_rate = cls.BANK_DOWN_PAYMENT
+            annual_rate = cls.BANK_ANNUAL_RATE
+        else:
+            down_payment_rate = cls.HDB_DOWN_PAYMENT
+            annual_rate = cls.HDB_ANNUAL_RATE
+        
+        ltv_ratio = 1 - down_payment_rate  # Loan-to-value ratio
+        monthly_rate = annual_rate / 12
+        total_periods = tenure_years * 12
+        
+        # Affordability caps
+        msr_cap = income * cls.MSR_RATIO  # Mortgage Servicing Ratio (30%)
+        tdsr_cap = max(0, income * cls.TDSR_RATIO - expenses)  # TDSR (55%) minus expenses
+        available_for_loan = min(msr_cap, tdsr_cap)
+        
+        # CPF monthly contribution usable for servicing
+        cpf_monthly = income * cls.CPF_MONTHLY_RATIO
+        
+        # Total monthly budget for loan payments
+        monthly_budget = available_for_loan + cpf_monthly
+        
+        # Maximum loan amount based on monthly budget
+        loan_from_budget = cls.present_value_from_payment(monthly_budget, monthly_rate, total_periods)
+        
+        # Maximum property price based on loan capacity
+        price_by_loan = loan_from_budget / ltv_ratio
+        
+        # Maximum property price based on available down payment funds
+        upfront_funds = cpf_balance + cash_balance
+        price_by_down_payment = upfront_funds / down_payment_rate
+        
+        # Final maximum price (constrained by both loan capacity and down payment)
+        max_price = min(price_by_loan, price_by_down_payment)
+        
+        # Calculate final loan amount and down payment
+        loan_amount = max_price * ltv_ratio
+        down_payment_required = max_price * down_payment_rate
+        
+        # Allocate down payment (CPF first, then cash)
+        cpf_used = min(cpf_balance, down_payment_required)
+        cash_required = max(0, down_payment_required - cpf_used)
+        
+        # Calculate actual monthly payment for this loan
+        actual_monthly_payment = cls.payment_from_present_value(loan_amount, monthly_rate, total_periods)
+        
+        # Round all monetary values to 2 decimal places
+        return {
+            "max_price": round(max_price, 2),
+            "loan_amount": round(loan_amount, 2),
+            "down_payment_required": round(down_payment_required, 2),
+            "cpf_used": round(cpf_used, 2),
+            "cash_required": round(cash_required, 2),
+            "available_for_loan": round(available_for_loan, 2),
+            "cpf_monthly": round(cpf_monthly, 2),
+            "actual_monthly_payment": round(actual_monthly_payment, 2),
+            "property_type": property_type,
+            "annual_rate": annual_rate,
+            "down_payment_rate": down_payment_rate,
+            "tenure_years": tenure_years,
+        }

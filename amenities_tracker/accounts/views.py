@@ -9,10 +9,11 @@ from django.contrib.auth import login, authenticate, logout
 from django_otp.plugins.otp_email.models import EmailDevice
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from .forms import RoommateProfileForm, SharingRequestForm, ContactMessageForm, OTPForm, CustomUserCreationForm, LoginForm, AmenitiesSearchForm
+from .forms import RoommateProfileForm, SharingRequestForm, ContactMessageForm, OTPForm, CustomUserCreationForm, LoginForm, AmenitiesSearchForm, CalculatorForm
 from .models import CustomUser
 from urllib.parse import quote as urlquote, urlparse
 from . import services
+from .services import CalculatorService
 
 def _back_with_query(request, default_name="home"):
     ref = request.META.get("HTTP_REFERER")
@@ -308,6 +309,49 @@ def amenities(request):
 @login_required
 def properties(request):
     return render(request, 'accounts/properties.html')
+
+@login_required
+def calculator(request):
+    """
+    View for the HDB affordability calculator page.
+    Handles both GET (display form) and POST (process calculation) requests.
+    """
+    form = CalculatorForm()
+    results = None
+    
+    if request.method == "POST":
+        form = CalculatorForm(request.POST)
+        if form.is_valid():
+            # Extract form data
+            income = float(form.cleaned_data["income"])
+            expenses = float(form.cleaned_data["expenses"])
+            cpf_balance = float(form.cleaned_data["cpf_balance"])
+            cash_balance = float(form.cleaned_data["cash_balance"])
+            property_type = form.cleaned_data["property_type"]
+            tenure_years = form.cleaned_data["tenure_years"]
+            
+            # Calculate affordability using service
+            results = CalculatorService.calculate_affordability(
+                income=income,
+                expenses=expenses,
+                cpf_balance=cpf_balance,
+                cash_balance=cash_balance,
+                property_type=property_type,
+                tenure_years=tenure_years
+            )
+            
+            # Add success message
+            messages.success(request, "Calculation completed successfully!")
+        else:
+            # Add error message if form is invalid
+            messages.error(request, "Please fix the form errors and try again.")
+    
+    context = {
+        "form": form,
+        "results": results,
+    }
+    
+    return render(request, "accounts/calculator.html", context)
 
 @login_required
 def roommates(request):

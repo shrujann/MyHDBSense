@@ -31,6 +31,12 @@
              href="{% url 'roommates' %}">Roommates</a>
         </li>
         {% endwith %}
+
+        <!-- Calculator -->
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'calculator' %}active{% endif %}"
+             href="{% url 'calculator' %}">Calculator</a>
+        </li>
       </ul>
 
       <!-- Right side Auth -->

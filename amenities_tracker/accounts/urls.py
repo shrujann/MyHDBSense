@@ -32,6 +32,7 @@ urlpatterns = [
     path("search/", views.search_flats, name="search_flats"), # search flats view
     path('search-amenities/', views.search_amenities, name='search_amenities'), 
     path('amenities/', views.amenities, name='amenities'), # amenities view
+    path('calculator/', views.calculator, name='calculator'), # HDB affordability calculator view
 
     path('roommate/profile/', views.roommate_profile_edit, name='roommate_profile_edit'),
     path('roommate/sharing-request/', views.sharing_request, name='sharing_request'),

@@ -118,3 +118,78 @@ class SharingRequestForm(forms.Form):
 
 class ContactMessageForm(forms.Form):
     message = forms.CharField(widget=forms.Textarea, max_length=2000, label="Message to send")
+
+class CalculatorForm(forms.Form):
+    """
+    Form for HDB affordability calculator inputs
+    """
+    income = forms.DecimalField(
+        label="Monthly Gross Income (SGD)",
+        max_digits=10,
+        decimal_places=2,
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'e.g. 6000',
+            'class': 'form-control',
+            'step': '0.01'
+        })
+    )
+    
+    expenses = forms.DecimalField(
+        label="Monthly Expenses (SGD)",
+        max_digits=10,
+        decimal_places=2,
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'e.g. 2000',
+            'class': 'form-control',
+            'step': '0.01'
+        })
+    )
+    
+    cpf_balance = forms.DecimalField(
+        label="CPF OA Balance (SGD)",
+        max_digits=12,
+        decimal_places=2,
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'e.g. 80000',
+            'class': 'form-control',
+            'step': '0.01'
+        }),
+        help_text="Can be used for down payment and monthly servicing"
+    )
+    
+    cash_balance = forms.DecimalField(
+        label="Cash Available for Down Payment (SGD)",
+        max_digits=12,
+        decimal_places=2,
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'e.g. 50000',
+            'class': 'form-control',
+            'step': '0.01'
+        })
+    )
+    
+    property_type = forms.ChoiceField(
+        label="Property Type",
+        choices=[
+            ('HDB_20', 'HDB (20% down payment)'),
+            ('BANK_25', 'Bank Loan (25% down payment)')
+        ],
+        initial='HDB_20',
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    tenure_years = forms.IntegerField(
+        label="Loan Tenure (Years)",
+        min_value=5,
+        max_value=30,
+        initial=25,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '5',
+            'max': '30'
+        })
+    )
