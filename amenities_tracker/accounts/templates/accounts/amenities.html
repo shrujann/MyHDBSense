@@ -454,7 +454,7 @@
       const lng = (a.longitude!=null)? Number(a.longitude): null;
       const has = (lat!=null && !isNaN(lat) && lng!=null && !isNaN(lng));
       const dist = (typeof a.distance === "number") ? a.distance : (has ? haversineKm(CENTER, {lat, lng}) : null);
-      const rawName = a.name || 'Amenity';
+      const rawName = a.name || a.NAME || 'Amenity';
       const rawAddr = a.address || '';
       return {
         id: a.id || `${(a.type||'Amenity')}_${rawName}_${a.postal_code||''}`.replace(/\s+/g,'_'),

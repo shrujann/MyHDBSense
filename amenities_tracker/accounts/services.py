@@ -773,7 +773,7 @@ def findchildcare(postalcode):
     """
     Fetch childcare services from Singapore government API.
     Returns list of dicts with name, address, postal_code, lat/lon.
-    Safely handles missing/null fields.
+    Handles missing/null fields.
     """
     dataset_id = "d_5d668e3f544335f8028f546827b773b4"
     postal_code = str(postalcode)
@@ -798,33 +798,22 @@ def findchildcare(postalcode):
             props = feature.get('properties', {})
             coords = feature.get('geometry', {}).get('coordinates', [None, None])
 
-            # Parse attributes from HTML table in Description
-            soup = BeautifulSoup(props.get('Description', ''), 'html.parser')
-            rows = soup.find_all('tr')
-            data = {}
-            for row in rows[1:]:  # skip header
-                cells = row.find_all(['th', 'td'])
-                if len(cells) == 2:
-                    key = cells[0].get_text(strip=True)
-                    value = cells[1].get_text(strip=True)
-                    data[key] = value if value else None
-
-            # Safely build address using only non-empty fields
+            # Build address using only non-empty fields
             address_parts = [
-                data.get('ADDRESSBLOCKHOUSENUMBER'),
-                data.get('ADDRESSSTREETNAME'),
-                data.get('ADDRESSBUILDINGNAME')
+                props.get('ADDRESSBLOCKHOUSENUMBER'),
+                props.get('ADDRESSSTREETNAME'),
+                props.get('ADDRESSBUILDINGNAME')
             ]
-            address = ' '.join([str(p) for p in address_parts if p]) if any(address_parts) else None
+            address = ' '.join([str(p).strip() for p in address_parts if p and str(p).strip()]) if any(address_parts) else props.get('ADDRESSSTREETNAME')
 
             entry = {
-                "name": data.get("NAME"),
-                "address": address or data.get("ADDRESSSTREETNAME"),
-                "postal_code": data.get("ADDRESSPOSTALCODE"),
+                "name": props.get("NAME"),
+                "address": address,
+                "postal_code": props.get("ADDRESSPOSTALCODE"),
                 "latitude": coords[1] if len(coords) > 1 else None,
                 "longitude": coords[0] if coords else None,
-                "last_update": data.get("FMEL_UPD_D"),
-                "description": data.get("DESCRIPTION"),
+                "last_update": props.get("FMEL_UPD_D"),
+                "description": props.get("DESCRIPTION"),
             }
 
             childcare.append(entry)
@@ -832,8 +821,9 @@ def findchildcare(postalcode):
         return childcare
 
     except Exception as e:
-        print(f"Error fetching childcare data: {e}")
+        print(f"Exception in findchildcare: {e}")
         return []
+
 
 def findgym(postalcode):
     """
@@ -1465,14 +1455,14 @@ def _process_childcare(records, lat, lon, radius_km):
             
             if dist <= radius_km:
                 amenities.append({
-                    "name": record.get("name"),
+                    "name": record.get('name'),
                     "type": "Childcare",
-                    "address": record.get("address"),
-                    "postal_code": record.get("postal_code"),
+                    "address": record.get('address'),
+                    "postal_code": record.get('postal_code'),
                     "latitude": amenity_lat,
                     "longitude": amenity_lon,
-                    "last_update": record.get("last_update"),
-                    "description": record.get("description"),
+                    "last_update": record.get('last_update'),
+                    "description": record.get('description'),
                     "distance": round(dist, 2),
                 })
     
