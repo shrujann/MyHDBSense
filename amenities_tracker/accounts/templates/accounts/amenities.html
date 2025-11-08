@@ -275,20 +275,18 @@
 
       <div class="row g-3">
         <div class="col-md-6">
-          <button class="contrib-card h-100 w-100 text-start text-md-center"
-                  data-bs-toggle="modal" data-bs-target="#addAmenityModal">
+          <a href="{% url 'mappage' %}" class="contrib-card h-100 w-100 text-start text-md-center text-decoration-none">
             <div class="text-success mb-2" style="font-size:38px; line-height:1">+</div>
             <div class="fw-semibold">Add New Amenity</div>
             <div class="text-muted small">Report missing location</div>
-          </button>
+          </a>
         </div>
         <div class="col-md-6">
-          <button id="openContribBtn" class="contrib-card h-100 w-100 text-start text-md-center"
-                  data-bs-toggle="modal" data-bs-target="#viewContribModal">
+          <a href="{% url 'results' %}" class="contrib-card h-100 w-100 text-start text-md-center text-decoration-none">
             <div class="text-primary mb-2"><i class="bi bi-chat-dots"></i></div>
             <div class="fw-semibold">View Contributions</div>
             <div class="text-muted small">Upvote user-submitted requests</div>
-          </button>
+          </a>
         </div>
       </div>
     </section>
