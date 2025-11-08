@@ -286,7 +286,7 @@ def search_amenities(request):
             "center_lng": result["center_lon"],
             "postal_code": postal_code,
             "score": result.get("score", 0),
-            "percentage": result.get("percentage", 0),
+            "percentage": result.get("percent_score", 0),
         })
     
     elif form and not form.is_valid():
