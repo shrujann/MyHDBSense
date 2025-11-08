@@ -88,9 +88,25 @@ class RoommateProfileForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
-        csv = self.data.get("neighbourhoods_csv", "") or self.cleaned_data.get("neighbourhoods_csv", "")
-        data["preferred_neighbourhoods"] = [s.strip() for s in csv.split(",") if s.strip()]
+
+        csv = self.data.get("neighbourhoods_csv", "") or data.get("neighbourhoods_csv", "")
+        raw_items = [s.strip() for s in csv.split(",") if s.strip()]
+
+        canon_map = {n.lower(): n for n in VALID_NEIGHBOURHOODS}
+
+        invalid = [s for s in raw_items if s.lower() not in canon_map]
+        if invalid:
+            raise forms.ValidationError("Invalid neighbourhood input.")
+
+        data["preferred_neighbourhoods"] = [canon_map[s.lower()] for s in raw_items]
         return data
+
+VALID_NEIGHBOURHOODS = {
+    "Ang Mo Kio","Bedok","Bishan","Bukit Batok","Bukit Merah","Bukit Panjang","Bukit Timah",
+    "Central Area","Choa Chu Kang","Clementi","Geylang","Hougang","Jurong East","Jurong West",
+    "Kallang/Whampoa","Marine Parade","Novena","Pasir Ris","Punggol","Queenstown","Sembawang",
+    "Sengkang","Serangoon","Tampines","Toa Payoh","Woodlands","Yishun"
+}
 
 class SharingRequestForm(forms.Form):
     min_age = forms.IntegerField(required=False)
