@@ -1282,11 +1282,22 @@ def search_nearby_amenities(postal_code, radius_km=1.5):
     
     # Step 4: Sort by distance
     amenities.sort(key=lambda x: x.get("distance", 999))
+
+    # Step 5: Find Amenities Score
+    all_categories = [
+    "School", "Eldercare", "MRT Station", "Library", "CHAS Clinic",
+    "Hawker Centre", "Tourism", "Preschool", "Childcare", "Gym",
+    "SportSG", "Park", "Market Centre", "Supermarket"
+    ]
+    score_dict, total_score, percent_score = amenities_score(amenities, all_categories)
+    percent100 = percent_score * 100
     
     return {
         "amenities": amenities,
         "center_lat": lat,
         "center_lon": lon,
+        "score": total_score,
+        "percent_score": round(percent100, 2),
     }
 
 
@@ -1606,3 +1617,13 @@ def _process_supermarket(records, lat, lon, radius_km):
     
     return amenities
 # =================== End of Amenities Tracker Views ======================
+
+def amenities_score(amenity_list, categories):
+    found_types = {a.get('type') for a in amenity_list}
+    # Dict of 1/0 per category
+    score_dict = {cat: 1 if cat in found_types else 0 for cat in categories}
+    # Total categories with at least 1 amenity
+    total = sum(score_dict.values())
+    # Score percent (as float, for 0-1 or 0-100 scale)
+    percent = total / len(categories) if categories else 0
+    return score_dict, total, percent
