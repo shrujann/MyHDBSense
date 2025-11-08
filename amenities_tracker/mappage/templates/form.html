@@ -145,7 +145,7 @@
       <i class="bi bi-arrow-left"></i>
     </a>
 
-    <h2>Fill in the Missing/New Amenities</h2>
+    <h2>Feedback form</h2>
     <form method="POST">
       {% csrf_token %}
       <div class="form-group">
@@ -277,7 +277,7 @@
 
       <div class="form-group">
         <label for="description">Description:</label>
-        <textarea id="description" name="description" placeholder="Enter a description" required>{{ form.description.value|default:'' }}</textarea>
+        <textarea id="description" name="description" placeholder="Let us know the issue!" required>{{ form.description.value|default:'' }}</textarea>
       </div>
 
       <div class="form-group">
