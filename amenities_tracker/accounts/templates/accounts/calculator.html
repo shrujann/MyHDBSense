@@ -90,6 +90,18 @@
   {% include "accounts/navbar.html" %}
 
   <main class="calc-wrap px-3 px-md-4 py-4 py-lg-5">
+    {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     <!-- Left-aligned header; card below is centered as in your screenshots -->
     <header class="mb-4">
       <h2 class="page-title mb-1">HDB Affordability Calculator</h2>
