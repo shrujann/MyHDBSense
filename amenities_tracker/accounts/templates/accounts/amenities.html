@@ -152,6 +152,19 @@
   {% include "accounts/navbar.html" %}
 
   <main class="container py-4">
+    <!-- Django Messages Display -->
+    {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     <header class="mb-3">
       <h2 class="mb-1">Amenities Explorer</h2>
       <p class="text-muted mb-0">Discover amenities around Singapore with distance-based filtering.</p>
@@ -163,14 +176,19 @@
         <i class="bi bi-geo-alt fs-5 text-secondary"></i>
         <div>
           <div class="fw-semibold">Enter Your Singapore Location</div>
-          <div class="text-muted small">Enter a postal code to see amenities within 1.5 km.</div>
+          <div class="text-muted small">Enter a valid Singapore postal code to see amenities within 1.5 km.</div>
         </div>
       </div>
 
       <form class="row g-2 align-items-center" method="get" action="{% url 'search_amenities' %}">
         <div class="col-lg-10">
           <label class="form-label small text-muted">Postal Code</label>
-          <input name="q" class="form-control" placeholder="e.g. 310190" required>
+          <input name="q" class="form-control" placeholder="e.g. 310190" 
+                 value="{{ request.GET.q|default:'' }}"
+                 pattern="[0-9]{6}" 
+                 title="Please enter a 6-digit Singapore postal code"
+                 maxlength="6" required>
+          <div class="form-text">Must be a valid 6-digit Singapore postal code (sectors 01-82)</div>
         </div>
         <div class="col-6 col-lg-2 d-grid">
           <label class="form-label opacity-0">.</label>

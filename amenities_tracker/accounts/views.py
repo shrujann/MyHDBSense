@@ -9,7 +9,7 @@ from django.contrib.auth import login, authenticate, logout
 from django_otp.plugins.otp_email.models import EmailDevice
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from .forms import RoommateProfileForm, SharingRequestForm, ContactMessageForm, OTPForm, CustomUserCreationForm, LoginForm
+from .forms import RoommateProfileForm, SharingRequestForm, ContactMessageForm, OTPForm, CustomUserCreationForm, LoginForm, AmenitiesSearchForm
 from .models import CustomUser
 from urllib.parse import quote as urlquote, urlparse
 from . import services
@@ -125,7 +125,7 @@ def password_reset_modal(request):
             )
             messages.success(
                 request,
-                "If an account exists with that email, we’ve sent instructions to reset your password.",
+                "If an account exists with that email, we've sent instructions to reset your password.",
                 extra_tags="auth" 
             )
             return redirect(_back_with_query(request) + "showLogin=true")
@@ -256,41 +256,52 @@ def contact_roommate(request, user_id):
 @login_required
 # ------ Amneities Tracker Views ------
 def search_amenities(request):
-    postal_code = request.GET.get("q", "").strip()
-    filter_type = request.GET.get("type", "").strip()  # Optional filter
-    
-    if not postal_code:
-        context = {
-            "amenities": [],
-            "center_lat": 1.3521,
-            "center_lng": 103.8198,
-        }
-        return render(request, "accounts/amenities_results.html", context)
-    
-    result = services.search_nearby_amenities(postal_code, radius_km=1.5)
-    
-    # Filter by type if specified
-    amenities = result["amenities"]
-    if filter_type:
-        amenities = [a for a in amenities if a["type"].lower() == filter_type.lower()]
+    """
+    View for searching amenities by Singapore postal code with validation.
+    """
+    form = AmenitiesSearchForm(request.GET or None)
     
     context = {
-        "amenities": amenities,
-        "center_lat": result["center_lat"],
-        "center_lng": result["center_lon"],
-        "postal_code": postal_code,
-        "filter_type": filter_type,
+        "amenities": [],
+        "center_lat": 1.3521,
+        "center_lng": 103.8198,
+        "form": form,
+        "postal_code": "",
     }
+    
+    # Only process search if form is valid
+    if form and form.is_valid():
+        postal_code = form.cleaned_data["q"]
+        
+        # Call service to search amenities
+        result = services.search_nearby_amenities(postal_code, radius_km=1.5)
+        
+        # Add error message if postal code lookup failed
+        if result.get("error"):
+            messages.error(request, f"Error: {result['error']}")
+        
+        context.update({
+            "amenities": result["amenities"],
+            "center_lat": result["center_lat"],
+            "center_lng": result["center_lon"],
+            "postal_code": postal_code,
+        })
+    
+    elif form and not form.is_valid():
+        # Form has validation errors - display them
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(request, error)
     
     return render(request, "accounts/amenities.html", context)
                     
 
 @login_required
 def amenities(request):
-    if request.method == 'POST':
-        print(request.POST)  
-        
-    return render(request, 'accounts/amenities.html')
+    """
+    Main amenities page view - handles both display and search.
+    """
+    return search_amenities(request)
 
 @login_required
 def properties(request):
@@ -301,6 +312,6 @@ def roommates(request):
     qs = RoommateProfile.objects.select_related("user").all().order_by("-is_looking", "-id")
     form = SharingRequestForm()
     return render(request, "accounts/roommates.html", {"profiles": qs, "form": form})
-        
-        
-            
+
+
+
