@@ -3,8 +3,6 @@
 **A Smart Singapore HDB/Resale Explorer & Amenities Tracker**  
 *SC2006 Course Project*
 
-![Languages](https://img.shields.io/badge/languages-HTML%2053.9%25%20%7C%20Python%2046.1%25https://img.shields.io/github/contributors/shrujann/MyHDBSense(https://github.com/shrujann/MyHDBSense/graphs/contributorshttps://img.shields.io/github/forks/shrujann/MyHDBSense(https://github.com/shrujann/MyHDBSense/forkshttps://img.shields.io/github/stars/shrujann/MyHDBSense(https://github.com/shrujann/MyHDBSense/stargazers
-
 **MyHDBSense** is a web application designed for helping Singapore HDB (public housing) buyers and residents:
 - **Find resale flats and amenities near any location**
 - **Visualize important nearby features, including MRT, clinics, schools, parks, supermarkets, and more**
