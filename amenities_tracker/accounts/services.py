@@ -467,39 +467,54 @@ def findmrt(postalcode):
         mrt_stations = []
         
         for feature in geojson_data['features']:
-            # Parse HTML description to extract attributes
-            soup = BeautifulSoup(feature['properties']['Description'], 'html.parser')
-            rows = soup.find_all('tr')
+            props = feature.get('properties', {})
+            coords = feature.get('geometry', {}).get('coordinates', [None, None])
             
-            # Extract data from HTML table
+            # Check if Description exists before parsing HTML
+            description = props.get('Description')
             data = {}
-            for row in rows[1:]:  # Skip header row
-                cells = row.find_all(['th', 'td'])
-                if len(cells) == 2:
-                    key = cells[0].get_text(strip=True)
-                    value = cells[1].get_text(strip=True)
-                    data[key] = value if value else None
             
-            # Get coordinates
-            coords = feature['geometry']['coordinates']
+            if description:
+                # Parse HTML description to extract attributes
+                soup = BeautifulSoup(description, 'html.parser')
+                rows = soup.find_all('tr')
+                
+                # Extract data from HTML table
+                for row in rows[1:]:  # Skip header row
+                    cells = row.find_all(['th', 'td'])
+                    if len(cells) == 2:
+                        key = cells[0].get_text(strip=True)
+                        value = cells[1].get_text(strip=True)
+                        data[key] = value if value else None
+            else:
+                # Fallback: try to get data directly from properties
+                data = {
+                    'STATION_NA': props.get('STATION_NA') or props.get('station_name') or props.get('name'),
+                    'EXIT_CODE': props.get('EXIT_CODE') or props.get('exit_code') or 'Main Exit'
+                }
             
             # Create station record
+            station_name = data.get('STATION_NA') or 'Unknown Station'
+            exit_code = data.get('EXIT_CODE') or 'Main Exit'
+            
             station = {
-                "station_name": data.get('STATION_NA'),
-                "exit_code": data.get('EXIT_CODE'),
-                "name": f"{data.get('STATION_NA')} {data.get('EXIT_CODE')}",  # Combined name
-                "latitude": coords[1],  # GeoJSON is [lon, lat]
-                "longitude": coords[0],
+                "station_name": station_name,
+                "exit_code": exit_code,
+                "name": f"{station_name} {exit_code}",  # Combined name
+                "latitude": coords[1] if len(coords) > 1 and coords[1] is not None else None,
+                "longitude": coords[0] if len(coords) > 0 and coords[0] is not None else None,
             }
             
-            mrt_stations.append(station)
+            # Only add if we have valid coordinates
+            if station["latitude"] is not None and station["longitude"] is not None:
+                mrt_stations.append(station)
         
         return mrt_stations
         
     except Exception as e:
         print(f"Error fetching MRT data: {e}")
         return []
-    
+
 def findlibrary(postalcode):
     """
     Fetch public libraries from Singapore government API (NLB dataset)
