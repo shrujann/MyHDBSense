@@ -112,14 +112,6 @@ Original authors: [shrujann](https://github.com/shrujann), [ZachZYL](https://git
 
 Reach us via GitHub Issues.
 
-***
-
-## Example Screenshots
-
-*(To add: screenshots of map features, amenities explorer, property search page, etc.)*
-
-***
-
 ## Project Status
 
 Active development. Latest commits include:
