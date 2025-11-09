@@ -175,29 +175,18 @@
     /* Inline spinner */
     .inline-spinner{ display:flex; align-items:center; gap:10px; padding:16px; color:#555; }
 
-    .score-circle {
-        width: 54px;
-        height: 54px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 1.1rem;
-        color: #fff;
+    .score-circle{
+      width:54px;height:54px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:1.1rem;
+      background:#9ca3af;            
+      color:#111;                    
     }
 
-    .bg-danger {
-        background-color: #dc3545 !important;
-    }
-
-    .bg-warning {
-        background-color: #ffc107 !important;
-    }
-
-    .bg-success {
-        background-color: #198754 !important;
-    }
+    .score-circle.score--danger  { background:#dc3545 !important; color:#fff; }
+    .score-circle.score--warning { background:#ffc107 !important; color:#111; }
+    .score-circle.score--success { background:#10623c !important; color:#fff; }
+    .score-circle.score--neutral { background:#9ca3af !important; color:#111; }
   </style>
 </head>
 <body class="bg-light">
@@ -381,7 +370,7 @@
               <i class="bi bi-plus-circle"></i>
             </div>
             <div class="title">Feedback for Amenity</div>
-            <p class="desc">Report missing amenity or update existing one</p>
+            <p class="desc">Report missing amenites or update existing ones</p>
           </a>
         </div>
         <div class="col-md-6">

@@ -1295,12 +1295,15 @@ def search_nearby_amenities(postal_code, radius_km=1.5):
     score_dict, total_score, percent_score = amenities_score(amenities, all_categories)
     percent100 = percent_score * 100
     
+    percentage = round(percent100, 2)
+
     return {
         "amenities": amenities,
         "center_lat": lat,
         "center_lon": lon,
         "score": total_score,
-        "percent_score": round(percent100, 2),
+        "percent_score": percentage,
+        "score_class": AmenityScoreService.get_score_class(percentage),
     }
 
 
@@ -1634,42 +1637,10 @@ def amenities_score(amenity_list, categories):
 class AmenityScoreService:
     @staticmethod
     def get_score_class(percentage):
-        try:
-            value = float(percentage)
-            if value <= 50:
-                return "bg-danger"
-            elif value <= 69:
-                return "bg-warning"
-            else:
-                return "bg-success"
-        except (ValueError, TypeError):
-            return "bg-secondary"
-
-    @staticmethod
-    def get_score_text_class(percentage):
-        try:
-            value = float(percentage)
-            if value <= 50:
-                return "text-danger"
-            elif value <= 69:
-                return "text-warning"
-            else:
-                return "text-success"
-        except (ValueError, TypeError):
-            return "text-secondary"
-
-    @staticmethod
-    def get_score_status(percentage):
-        try:
-            value = float(percentage)
-            if value <= 50:
-                return "Needs Improvement"
-            elif value <= 69:
-                return "Moderate Coverage"
-            else:
-                return "Good Coverage"
-        except (ValueError, TypeError):
-            return "Unknown Status"
+        value = float(percentage or 0)
+        if value <= 50:  return "score--danger"
+        if value <= 69:  return "score--warning"
+        return "score--success"
 
 class CalculatorService:
     """Service class for HDB affordability calculations"""

@@ -85,6 +85,24 @@ def verify_otp(request, user_id):
 
     return render(request, "accounts/verify_otp.html", {"user_id": user_id})
 
+# Redirect helpers
+_RESET_PATH_SNIPPETS = ("password-reset",)
+
+
+def _safe_next_url(candidate):
+    """Avoid bouncing users back to password reset screens after login."""
+    if not candidate:
+        return reverse("home")
+
+    parsed = urlparse(candidate)
+    target_path = parsed.path or candidate
+
+    if any(snippet in target_path for snippet in _RESET_PATH_SNIPPETS):
+        return reverse("home")
+
+    return candidate
+
+
 # Log in view
 def login_view(request):
     if request.method == "POST":
@@ -96,13 +114,22 @@ def login_view(request):
             or request.session.pop("post_login_next", None)
             or reverse("home")
         )
+        next_url = _safe_next_url(next_url)
 
         if not username or not password:
             messages.error(request, "Please enter both email and password.", extra_tags="auth")
             home = reverse("home")
             return redirect(f"{home}?showLogin=true&next={urlquote(next_url)}")
 
-        user = authenticate(request, username=username, password=password)
+        # Allow users to sign in with either their username or email (older accounts use unique usernames).
+        identifier = username
+        match = None
+        if username:
+            match = User.objects.filter(Q(username__iexact=username) | Q(email__iexact=username)).first()
+        if match:
+            identifier = match.get_username()
+
+        user = authenticate(request, username=identifier, password=password)
         if user is not None:
             login(request, user)
             return redirect(next_url)
@@ -112,6 +139,7 @@ def login_view(request):
         return redirect(f"{home}?showLogin=true&next={urlquote(next_url)}")
 
     next_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or reverse("home")
+    next_url = _safe_next_url(next_url)
     request.session["post_login_next"] = next_url  
     home = reverse("home")
     return redirect(f"{home}?showLogin=true&next={urlquote(next_url)}")
@@ -329,6 +357,9 @@ def search_amenities(request):
         "center_lng": 103.8198,
         "form": form,
         "postal_code": "",
+        "score": 0,
+        "percentage": 0,
+        "score_class": "score--neutral",
     }
     
     # Only process search if form is valid
@@ -349,6 +380,7 @@ def search_amenities(request):
             "postal_code": postal_code,
             "score": result.get("score", 0),
             "percentage": result.get("percent_score", 0),
+            "score_class": result.get("score_class", "score--neutral"),
         })
     
     elif form and not form.is_valid():
@@ -362,28 +394,22 @@ def search_amenities(request):
 
 @login_required
 def amenities(request):
-    amenities_data = [] 
-   
-    total_categories = 14  # Total number of amenity categories
-    found_categories = len(set(a['type'] for a in amenities_data))
+    amenities_data = []  
+
+    total_categories = 14
+    found_categories = len({a['type'] for a in amenities_data})
     score = found_categories
-    percentage = round((score / total_categories) * 100)
-    
-    # Use the AmenityScoreService for score styling
+    percentage = round((score / total_categories) * 100) if total_categories else 0
+
     score_class = AmenityScoreService.get_score_class(percentage)
-    score_text_class = AmenityScoreService.get_score_text_class(percentage)
-    score_status = AmenityScoreService.get_score_status(percentage)
-    
+
     context = {
         'amenities': amenities_data,
         'score': score,
-        'percentage': percentage,
+        'percentage': percentage,   
         'score_class': score_class,
-        'score_text_class': score_text_class,
-        'score_status': score_status
     }
-    
-    return render(request, 'accounts/amenities.html', context)
+    return render(request, "accounts/amenities.html", context)
 
 @login_required
 def properties(request):
@@ -437,6 +463,3 @@ def roommates(request):
     qs = RoommateProfile.objects.select_related("user").all().order_by("-is_looking", "-id")
     form = SharingRequestForm()
     return render(request, "accounts/roommates.html", {"profiles": qs, "form": form})
-
-
-

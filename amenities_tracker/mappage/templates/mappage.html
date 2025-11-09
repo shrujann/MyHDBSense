@@ -1,156 +1,198 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Select Location</title>
+  <title>MyHDBSense | Add Amenities</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100vh; /* Full viewport height */
-      display: flex;
-      flex-direction: column;
-      background-color: #f4f4f9; /* Optional background color */
+    :root{
+      --brand:#2563eb;
+      --ink:#0f172a;
+      --muted:#6b7280;
+      --panel:#ffffff;
+      --border:#e3e8f4;
     }
 
-    .map-container {
-      flex-grow: 1; /* Allow the map to grow and fill available space */
-      width: 100vw; /* Full viewport width */
-      height: 100%; /* Full height */
-      border: none; /* Remove border */
-      border-radius: 0; /* Remove rounded corners */
-      box-shadow: none; /* Remove shadow */
+    *{box-sizing:border-box;}
+    html, body{
+      margin:0;
+      padding:0;
+      height:100%;
+      font-family:"Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background:#f5f6fb;
+      color:var(--ink);
     }
 
-    #map {
-      width: 100%;
-      height: 100%;
+    body.map-shell{
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
     }
 
-    .results-link {
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 4px;
-      font-size: 16px;
-      transition: background-color 0.3s ease;
+    .map-stage{
+      position:relative;
+      flex:1;
+      min-height:0;
     }
 
-    .results-link:hover {
-      background-color: #0056b3;
+    #map{
+      width:100%;
+      height:calc(100vh - 70px);
+      min-height:540px;
     }
 
-    .top-bar {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .map-toolbar{
+      position:absolute;
+      top:1rem;
+      left:50%;
+      transform:translateX(-50%);
+      width:min(960px, calc(100% - 2rem));
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow:0 18px 40px rgba(15,23,42,.15);
+      padding:1rem 1.2rem;
+      display:flex;
+      flex-wrap:wrap;
+      gap:.75rem 1rem;
+      align-items:center;
+      z-index:1000;
     }
 
-    /* Search UI */
-    .search-container {
-      position: relative;
-      width: 320px;
-      max-width: 70vw;
+    .toolbar-text{
+      flex:1 1 240px;
+    }
+    .toolbar-title{
+      margin:0;
+      font-size:1rem;
+      font-weight:700;
+      color:var(--ink);
+    }
+    .toolbar-copy{
+      margin:0;
+      font-size:.9rem;
+      color:var(--muted);
     }
 
-    .search-container input[type="text"] {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-      outline: none;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    .btn-cluster{
+      display:flex;
+      flex-wrap:wrap;
+      gap:.5rem;
+      justify-content:flex-start;
+    }
+    .pill-link{
+      display:inline-flex;
+      align-items:center;
+      gap:.35rem;
+      border-radius:999px;
+      border:1px solid var(--border);
+      padding:.55rem 1.1rem;
+      font-weight:600;
+      color:var(--ink);
+      text-decoration:none;
+      background:#fff;
+      transition:all .15s ease;
+    }
+    .pill-link:hover{border-color:var(--brand); color:var(--brand);}
+    .pill-link.primary{background:var(--brand);color:#fff;border-color:var(--brand);}
+    .pill-link.primary:hover{filter:brightness(.95);}
+
+    .toolbar-search{
+      position:relative;
+      flex:1 1 100%;
+    }
+    .toolbar-search input{
+      width:100%;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:.85rem 1rem .85rem 2.8rem;
+      font-size:1rem;
+      outline:none;
+      box-shadow:0 6px 18px rgba(15,23,42,.08);
+    }
+    .toolbar-search .bi-search{
+      position:absolute;
+      left:1rem;
+      top:50%;
+      transform:translateY(-50%);
+      color:var(--muted);
     }
 
-    .search-container input[type="text"]:focus {
-      border-color: #007bff;
-      box-shadow: 0 2px 8px rgba(0,123,255,0.2);
+    .search-results{
+      position:absolute;
+      top:calc(100% + 6px);
+      left:0;
+      right:0;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:14px;
+      box-shadow:0 18px 30px rgba(15,23,42,.15);
+      max-height:280px;
+      overflow:auto;
+      z-index:10;
+    }
+    .search-results.hidden{display:none;}
+    .search-results ul{list-style:none;margin:0;padding:0;}
+    .search-results li{padding:.85rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;}
+    .search-results li:last-child{border-bottom:none;}
+    .search-results li:hover{background:#f6f8ff;}
+    .result-title{font-weight:600;font-size:.95rem;}
+    .result-sub{display:block;font-size:.82rem;color:var(--muted);margin-top:2px;}
+
+    .toolbar-hints{
+      display:flex;
+      flex-wrap:wrap;
+      gap:1rem;
+      font-size:.85rem;
+      color:#475467;
+    }
+    .toolbar-hints span{
+      display:inline-flex;
+      align-items:center;
+      gap:.35rem;
     }
 
-    .search-results {
-      position: absolute;
-      top: 42px;
-      left: 0;
-      right: 0;
-      background: #fff;
-      border: 1px solid #ddd;
-      border-top: none;
-      max-height: 300px;
-      overflow-y: auto;
-      z-index: 1100;
-      border-bottom-left-radius: 4px;
-      border-bottom-right-radius: 4px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .search-results.hidden {
-      display: none;
-    }
-
-    .search-results ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-
-    .search-results li {
-      padding: 10px 12px;
-      cursor: pointer;
-      border-bottom: 1px solid #f2f2f2;
-    }
-
-    .search-results li:last-child {
-      border-bottom: none;
-    }
-
-    .search-results li:hover {
-      background: #f7f9fc;
-    }
-
-    .result-title {
-      font-weight: 600;
-      font-size: 13px;
-      color: #333;
-    }
-
-    .result-sub {
-      display: block;
-      color: #666;
-      font-size: 12px;
-      margin-top: 3px;
+    @media (max-width:768px){
+      #map{height:calc(100vh - 110px);}
+      .map-toolbar{
+        width:calc(100% - 1.5rem);
+        padding:.9rem 1rem;
+      }
+      .btn-cluster{width:100%;justify-content:flex-start;}
     }
   </style>
 </head>
-<body>
-  <div class="top-bar">
-    <a href="{% url 'amenities' %}" class="results-link" style="background-color: #6c757d;">
-      <i style="margin-right: 5px;">←</i> Back to Amenities
-    </a>
-    <a href="{% url 'results' %}" class="results-link">View Existing Amentity</a>
+<body class="map-shell">
+  {% include "accounts/navbar.html" %}
 
-    <!-- Address search -->
-    <div class="search-container">
-      <input id="search-input" type="text" placeholder="Search address in Singapore..." autocomplete="off" />
-      <div id="search-results" class="search-results hidden">
-        <ul id="search-list"></ul>
+  <main class="map-stage">
+    <div class="map-toolbar">
+      <div class="toolbar-text">
+        <p class="text-uppercase text-primary fw-semibold small mb-1">Community update</p>
+        <p class="toolbar-title">Share a Missing Amenity</p>
+        <p class="toolbar-copy">Pick a spot on the map or search for an address.</p>
+      </div>
+      <div class="btn-cluster">
+        <a href="{% url 'amenities' %}" class="pill-link"><i class="bi bi-arrow-left"></i>Back to Explorer</a>
+        <a href="{% url 'results' %}" class="pill-link primary"><i class="bi bi-chat-left-text"></i>View Requests</a>
+      </div>
+      <div class="toolbar-search">
+        <i class="bi bi-search"></i>
+        <input id="search-input" type="text" placeholder="Search any Singapore address..." autocomplete="off"/>
+        <div id="search-results" class="search-results hidden">
+          <ul id="search-list"></ul>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="map-container">
     <div id="map"></div>
-  </div>
+  </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <!-- Load Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
