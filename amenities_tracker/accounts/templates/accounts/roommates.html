@@ -83,23 +83,19 @@
 
           <div class="col-12 col-md-4">
             <label class="form-label small text-muted mb-1">Gender</label>
-            <!-- keep choices in sync with your form -->
             <select name="gender" class="form-select">
-              <option value="">No preference</option>
-              <option value="M">Male</option>
-              <option value="F">Female</option>
-              <option value="O">Other</option>
+              {% for value, label in form.gender.field.choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
             </select>
           </div>
 
           <div class="col-12 col-md-4">
             <label class="form-label small text-muted mb-1">Race</label>
             <select name="race" class="form-select">
-              <option value="-">No preference</option>
-              <option value="chinese">Chinese</option>
-              <option value="malay">Malay</option>
-              <option value="indian">Indian</option>
-              <option value="others">Others</option>
+              {% for value, label in form.race.field.choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
             </select>
           </div>
         </div>
@@ -196,21 +192,28 @@
 
     // -------- Render cards from <li> lines returned by sharing_request
     function liToCard(li){
+      const data = li.dataset || {};
       const text = li.textContent.trim();
-      const userMatch = text.match(/@([^\s]+)/);
-      const ageMatch = text.match(/Age:\s*([^,]+)/i);
-      const genderMatch = text.match(/Gender:\s*([^,]+)/i);
-      const budgetMatch = text.match(/Max Budget:\s*([^,]+)/i);
-      const areasMatch = text.match(/Areas:\s*(.*)$/i);
+      const fallback = (pattern) => {
+        const match = text.match(pattern);
+        return match ? match[1].trim() : '';
+      };
 
-      const username = userMatch ? userMatch[1] : 'user';
-      const age = ageMatch ? ageMatch[1] : '—';
-      const gender = genderMatch ? genderMatch[1] : '—';
-      const budget = budgetMatch ? budgetMatch[1] : '—';
-      const areas = areasMatch ? areasMatch[1] : '—';
+      const username = data.username || fallback(/@([^\s]+)/) || 'user';
+      const age = data.age || fallback(/Age:\s*([^,]+)/i) || '—';
+      const gender = data.gender || fallback(/Gender:\s*([^,]+)/i) || '—';
+      const lifestyle = data.lifestyle || fallback(/Lifestyle:\s*([^,]+)/i) || '—';
+      const race = data.race || fallback(/Race:\s*([^,]+)/i) || '—';
+      const budget = data.budget || fallback(/Max Budget:\s*([^,]+)/i) || '—';
+      let areas = data.areas || fallback(/Areas:\s*(.*)$/i) || '—';
+      if (areas.includes('·')) {
+        areas = areas.split('·')[0].trim() || '—';
+      }
 
-      const link = li.querySelector('a[href*="/roommate/contact/"]');
-      const contactHref = link ? link.getAttribute('href') : null;
+      const contactHref =
+        data.contactUrl ||
+        data.contact ||
+        (li.querySelector('a[href*="/roommate/contact/"]')?.getAttribute('href') || null);
 
       const col = document.createElement('div');
       col.className = 'col-12 col-md-6 col-lg-4';
@@ -223,6 +226,8 @@
           <div class="text-muted small mb-2">
             <span class="rm-chip me-1"><i class="bi bi-calendar2-week me-1"></i>Age: ${age}</span>
             <span class="rm-chip me-1"><i class="bi bi-gender-ambiguous me-1"></i>${gender}</span>
+            <span class="rm-chip me-1"><i class="bi bi-activity me-1"></i>${lifestyle}</span>
+            <span class="rm-chip me-1"><i class="bi bi-people me-1"></i>${race}</span>
             <span class="rm-chip"><i class="bi bi-currency-dollar me-1"></i>${budget}</span>
           </div>
           <div class="small"><i class="bi bi-geo-alt me-1"></i><span class="text-muted">Areas:</span> ${areas}</div>

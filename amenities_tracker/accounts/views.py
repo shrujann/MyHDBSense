@@ -247,6 +247,7 @@ def roommate_profile_edit(request):
             profile.display_name = form_data.get('display_name')
             profile.age_range = form_data.get('age_range')
             profile.gender = form_data.get('gender')
+            profile.race = form_data.get('race') or "-"
             profile.occupation = form_data.get('occupation')
             profile.lifestyle = form_data.get('lifestyle')
             profile.neighbourhoods_csv = form_data.get('neighbourhoods_csv')
@@ -258,6 +259,7 @@ def roommate_profile_edit(request):
                 display_name=form_data.get('display_name'),
                 age_range=form_data.get('age_range'),
                 gender=form_data.get('gender'),
+                race=form_data.get('race') or "-",
                 occupation=form_data.get('occupation'),
                 lifestyle=form_data.get('lifestyle'),
                 neighbourhoods_csv=form_data.get('neighbourhoods_csv'),
@@ -273,6 +275,7 @@ def roommate_profile_edit(request):
             'display_name': profile.display_name,
             'age_range': profile.age_range,
             'gender': profile.gender,
+            'race': profile.race,
             'occupation': profile.occupation,
             'lifestyle': profile.lifestyle,
             'neighbourhoods_csv': profile.neighbourhoods_csv,
@@ -325,6 +328,10 @@ def sharing_request(request):
             # Filter by gender
             if gender:
                 qs = qs.filter(gender=gender)
+
+            # Filter by race (skip "-" which means no preference)
+            if race and race != "-":
+                qs = qs.filter(race=race)
             
             # Filter by budget (using 'budget' field, not 'max_budget')
             if max_budget:

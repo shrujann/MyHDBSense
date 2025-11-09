@@ -78,6 +78,7 @@ class RoommateProfileForm(forms.ModelForm):
             'display_name',
             'age_range',
             'gender',
+            'race',
             'occupation',
             'lifestyle',
             'neighbourhoods_csv',
@@ -90,6 +91,7 @@ class RoommateProfileForm(forms.ModelForm):
             }),
             'age_range': forms.Select(attrs={'class': 'form-select'}),
             'gender': forms.Select(attrs={'class': 'form-select'}),
+            'race': forms.Select(attrs={'class': 'form-select'}),
             'occupation': forms.Select(attrs={'class': 'form-select'}),
             'lifestyle': forms.Select(attrs={'class': 'form-select'}),
             'budget': forms.NumberInput(attrs={
@@ -126,7 +128,10 @@ class SharingRequestForm(forms.Form):
     min_age = forms.IntegerField(required=False)
     max_age = forms.IntegerField(required=False)
     gender = forms.ChoiceField(choices=[("", "No preference")] + GENDER_CHOICES, required=False)
-    race = forms.ChoiceField(choices=[("-", "No preference")] + RACE_CHOICES, required=False)
+    race = forms.ChoiceField(
+        choices=[("-", "No preference")] + [choice for choice in RACE_CHOICES if choice[0] != "-"],
+        required=False
+    )
     max_budget = forms.IntegerField(required=False, help_text="Your maximum monthly budget (SGD)")
     neighbourhoods_csv = forms.CharField(required=False, help_text="Filter by comma-separated neighbourhoods")
 

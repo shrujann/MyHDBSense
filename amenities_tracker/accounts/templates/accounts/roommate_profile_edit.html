@@ -109,7 +109,7 @@
 
           <!-- Basic Info -->
           <div class="row g-3 mb-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
               <label class="form-label">Age</label>
               <select name="age_range" class="form-select" required>
                 <option value="">Select age range</option>
@@ -120,13 +120,27 @@
               </select>
             </div>
             
-            <div class="col-md-6">
+            <div class="col-md-4">
               <label class="form-label">Gender</label>
               <select name="gender" class="form-select" required>
                 <option value="">Select gender</option>
                 <option value="male" {% if form.initial.gender == 'male' %}selected{% endif %}>Male</option>
                 <option value="female" {% if form.initial.gender == 'female' %}selected{% endif %}>Female</option>
                 <option value="other" {% if form.initial.gender == 'other' %}selected{% endif %}>Other</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Race</label>
+              <select name="race" class="form-select" required>
+                <option value="-"
+                        {% if form.initial.race == '-' or not form.initial.race %}selected{% endif %}>
+                  Prefer not to say
+                </option>
+                <option value="chinese" {% if form.initial.race == 'chinese' %}selected{% endif %}>Chinese</option>
+                <option value="malay" {% if form.initial.race == 'malay' %}selected{% endif %}>Malay</option>
+                <option value="indian" {% if form.initial.race == 'indian' %}selected{% endif %}>Indian</option>
+                <option value="other" {% if form.initial.race == 'other' %}selected{% endif %}>Other</option>
               </select>
             </div>
           </div>

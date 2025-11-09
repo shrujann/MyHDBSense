@@ -9,12 +9,23 @@
   {% if results %}
     <ul>
       {% for p in results %}
-        <li>
+        <li
+          data-username="{{ p.user.username }}"
+          data-age="{{ p.age|default:'?' }}"
+          data-gender="{{ p.get_gender_display|default:'?' }}"
+          data-lifestyle="{{ p.get_lifestyle_display|default:'?' }}"
+          data-race="{{ p.get_race_display|default:'?' }}"
+          data-budget="{{ p.max_budget|default:'?' }}"
+          data-areas="{{ p.preferred_neighbourhoods|join:', '|default:'?' }}"
+          data-contact-url="{% url 'contact_roommate' p.user.id %}"
+        >
           <strong>@{{ p.user.username }}</strong>
           — Age: {{ p.age|default:"?" }},
           Gender: {{ p.get_gender_display }},
+          Lifestyle: {{ p.get_lifestyle_display }},
+          Race: {{ p.get_race_display }},
           Max Budget: {{ p.max_budget|default:"?" }},
-          Areas: {{ p.preferred_neighbourhoods|join:", " }}
+          Areas: {{ p.preferred_neighbourhoods|join:", "|default:"?" }}
           · <a href="{% url 'contact_roommate' p.user.id %}">Contact</a>
         </li>
       {% endfor %}

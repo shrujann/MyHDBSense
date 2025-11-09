@@ -36,6 +36,7 @@ class RoommateProfile(models.Model):
         default='25-34'
     )
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
+    race = models.CharField(max_length=10, choices=RACE_CHOICES, default="-")
     occupation = models.CharField(
         max_length=20,
         choices=[
@@ -60,6 +61,23 @@ class RoommateProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username}'s Profile"
+
+    @property
+    def age(self):
+        """Keep compatibility with legacy templates that expect an 'age' value."""
+        return self.get_age_range_display()
+
+    @property
+    def max_budget(self):
+        """Expose budget under the old attribute name used by roommate templates."""
+        return self.budget
+
+    @property
+    def preferred_neighbourhoods(self):
+        """Return the preferred neighbourhoods as a cleaned list."""
+        if not self.neighbourhoods_csv:
+            return []
+        return [chunk.strip() for chunk in self.neighbourhoods_csv.split(",") if chunk.strip()]
 
 class ContactAttempt(models.Model):
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_contacts")
