@@ -456,6 +456,8 @@
       // Price and size information
       document.getElementById("pmPrice").textContent = p.price != null ? '$' + money(p.price) : '—';
       document.getElementById("pmSqft").textContent = p.sqft != null ? p.sqft : "—";
+      const pricePerSqm = (p.price != null && Number(p.sqft)) ? Math.round(p.price / Number(p.sqft)) : null;
+      document.getElementById("pmPsf").textContent = pricePerSqm != null ? '$' + money(pricePerSqm) : "—";
       document.getElementById("pmLease").textContent = p.remainingLease || "—";
       
       // Location details
