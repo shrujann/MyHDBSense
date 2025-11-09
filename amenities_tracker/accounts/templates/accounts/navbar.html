@@ -231,10 +231,13 @@
     if (params.get("showRegister") === "true") open(registerForm);
     if (params.get("showReset") === "true") open(resetForm);
 
-    // Set "next" for login redirect
-    const nextFromQuery = params.get("next");
+    // Set "next" for login redirect, defaulting to the current page
     const nextInput = document.getElementById("loginNextInput");
-    if (nextInput && nextFromQuery) nextInput.value = nextFromQuery;
+    if (nextInput) {
+      const nextFromQuery = params.get("next");
+      const currentLocation = window.location.pathname + window.location.search;
+      nextInput.value = nextFromQuery || currentLocation || window.location.pathname;
+    }
 
     // Mirror email into username (Django backend expects username)
     const regEmail = document.getElementById('regEmail');
