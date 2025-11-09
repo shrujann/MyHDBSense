@@ -7,12 +7,22 @@ from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django_otp.plugins.otp_email.models import EmailDevice
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
-from .forms import RoommateProfileForm, SharingRequestForm, ContactMessageForm, OTPForm, CustomUserCreationForm, LoginForm, AmenitiesSearchForm, CalculatorForm
+from django.urls import reverse, reverse_lazy
+from django.contrib.auth.views import PasswordResetView, PasswordResetConfirmView
+from .forms import (
+    RoommateProfileForm,
+    SharingRequestForm,
+    ContactMessageForm,
+    OTPForm,
+    CustomUserCreationForm,
+    LoginForm,
+    AmenitiesSearchForm,
+    CalculatorForm,
+    EmailLookupPasswordResetForm,
+)
 from urllib.parse import quote as urlquote, urlparse
 from . import services
 from .services import CalculatorService, AmenityScoreService
-from django.contrib.auth.forms import PasswordResetForm
 
 def _back_with_query(request, default_name="home"):
     ref = request.META.get("HTTP_REFERER")
@@ -103,6 +113,24 @@ def _safe_next_url(candidate):
     return candidate
 
 
+class StrictPasswordResetView(PasswordResetView):
+    template_name = "accounts/password_reset.html"
+    form_class = EmailLookupPasswordResetForm
+    success_url = reverse_lazy("password_reset_done")
+
+
+class StrictPasswordResetConfirmView(PasswordResetConfirmView):
+    template_name = "accounts/password_reset_confirm.html"
+    success_url = reverse_lazy("password_reset_complete")
+
+    def form_valid(self, form):
+        new_password = form.cleaned_data.get("new_password1")
+        if form.user.check_password(new_password):
+            form.add_error("new_password1", "New password cannot be the same as old password")
+            return self.form_invalid(form)
+        return super().form_valid(form)
+
+
 # Log in view
 def login_view(request):
     if request.method == "POST":
@@ -151,7 +179,7 @@ def logout_view(request):
 
 def password_reset_modal(request):
     if request.method == "POST":
-        form = PasswordResetForm(request.POST)
+        form = EmailLookupPasswordResetForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data['email']
             associated_users = User.objects.filter(email=email)
@@ -192,7 +220,7 @@ def password_reset_modal(request):
             messages.error(request, msg, extra_tags="reset")
             return redirect("password_reset")
 
-    form = PasswordResetForm()
+    form = EmailLookupPasswordResetForm()
     return render(request, "accounts/password_reset.html", {"form": form})
 
 # home view

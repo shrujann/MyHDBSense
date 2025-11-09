@@ -1,5 +1,6 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, PasswordResetForm
+from django.contrib.auth import get_user_model
 from .models import CustomUser, RoommateProfile
 from .models import RoommateProfile, GENDER_CHOICES, RACE_CHOICES
 import re
@@ -207,3 +208,15 @@ class CalculatorForm(forms.Form):
             'max': '30'
         })
     )
+
+
+class EmailLookupPasswordResetForm(PasswordResetForm):
+    """
+    Enforces that the submitted email belongs to a registered user before sending reset instructions.
+    """
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip()
+        UserModel = get_user_model()
+        if not email or not UserModel.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("Email does not exist")
+        return email
