@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from decimal import Decimal, ROUND_HALF_UP
 import math
 from django import template
+import xml.etree.ElementTree as ET
 
 # Constants
 POSTAL_SECTOR_TO_TOWN = {
@@ -442,78 +443,82 @@ def findeldercare(postalcode):
 
 def findmrt(postalcode):
     """
-    Fetch MRT station exits from Singapore government API
+    Fetch MRT station exits from Singapore government API KML dataset.
     Returns list of dicts with station_name, exit_code, latitude, longitude
     """
-    dataset_id = "d_b39d3a0871985372d7e1637193335da5"  # LTA MRT Station Exit (GEOJSON)
-    postal_code = str(postalcode)
-    
+    dataset_id = "d_f820139ee3b0865b5512cf61ab7d1122"  # KML with full station names
     try:
         # Step 1: Poll for download URL
         url = f"https://api-open.data.gov.sg/v1/public/api/datasets/{dataset_id}/poll-download"
         response = requests.get(url, timeout=10)
         json_data = response.json()
-        
         if json_data['code'] != 0:
             print(f"API Error: {json_data.get('errMsg', 'Unknown error')}")
             return []
-        
-        # Step 2: Get actual data from the download URL
+
+        # Step 2: Get KML data
         download_url = json_data['data']['url']
         response = requests.get(download_url, timeout=10)
-        geojson_data = json.loads(response.text)
-        
-        # Step 3: Parse GeoJSON features
+        kml_text = response.text
+
+        # Step 3: Parse KML for Placemarks
+        root = ET.fromstring(kml_text)
+        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+
         mrt_stations = []
-        
-        for feature in geojson_data['features']:
-            props = feature.get('properties', {})
-            coords = feature.get('geometry', {}).get('coordinates', [None, None])
-            
-            # Check if Description exists before parsing HTML
-            description = props.get('Description')
-            data = {}
-            
-            if description:
-                # Parse HTML description to extract attributes
-                soup = BeautifulSoup(description, 'html.parser')
-                rows = soup.find_all('tr')
-                
-                # Extract data from HTML table
-                for row in rows[1:]:  # Skip header row
-                    cells = row.find_all(['th', 'td'])
+        for placemark in root.findall(".//kml:Placemark", ns):
+            placename = placemark.find("kml:name", ns)
+            desc = placemark.find("kml:description", ns)
+            coords = placemark.find(".//kml:coordinates", ns)
+            lon, lat = None, None
+            if coords is not None and coords.text:
+                parts = coords.text.strip().split(',')
+                if len(parts) >= 2:
+                    lon = float(parts[0])
+                    lat = float(parts[1])
+
+            station_name = None
+            exit_code = None
+            # Parse HTML table in description for detailed fields
+            if desc is not None and desc.text:
+                soup = BeautifulSoup(desc.text, "html.parser")
+                for tr in soup.find_all("tr"):
+                    cells = tr.find_all(['th', 'td'])
                     if len(cells) == 2:
-                        key = cells[0].get_text(strip=True)
+                        field = cells[0].get_text(strip=True)
                         value = cells[1].get_text(strip=True)
-                        data[key] = value if value else None
-            else:
-                # Fallback: try to get data directly from properties
-                data = {
-                    'STATION_NA': props.get('STATION_NA') or props.get('station_name') or props.get('name'),
-                    'EXIT_CODE': props.get('EXIT_CODE') or props.get('exit_code') or 'Main Exit'
-                }
-            
-            # Create station record
-            station_name = data.get('STATION_NA') or 'Unknown Station'
-            exit_code = data.get('EXIT_CODE') or 'Main Exit'
-            
+                        if field == "STATION_NA":
+                            station_name = value
+                        elif field == "EXIT_CODE":
+                            exit_code = value
+
+            # Fallback: use placename if station name not found
+            if station_name is None and placename is not None:
+                station_name = placename.text
+
             station = {
                 "station_name": station_name,
                 "exit_code": exit_code,
-                "name": f"{station_name} {exit_code}",  # Combined name
-                "latitude": coords[1] if len(coords) > 1 and coords[1] is not None else None,
-                "longitude": coords[0] if len(coords) > 0 and coords[0] is not None else None,
+                "latitude": lat,
+                "longitude": lon,
+                "name": f"{station_name} {exit_code}" if station_name and exit_code else None,
             }
-            
-            # Only add if we have valid coordinates
+            # Add only valid records
             if station["latitude"] is not None and station["longitude"] is not None:
                 mrt_stations.append(station)
-        
+
         return mrt_stations
-        
+
     except Exception as e:
         print(f"Error fetching MRT data: {e}")
         return []
+
+# Example usage:
+if __name__ == "__main__":
+    results = findmrt()
+    for item in results[:5]:
+        print(item)
+
 
 def findlibrary(postalcode):
     """
