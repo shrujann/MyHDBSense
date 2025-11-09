@@ -4,6 +4,9 @@ import json
 import concurrent.futures
 from math import radians, sin, cos, sqrt, atan2
 from bs4 import BeautifulSoup
+from decimal import Decimal, ROUND_HALF_UP
+import math
+from django import template
 
 # Constants
 POSTAL_SECTOR_TO_TOWN = {
@@ -1628,9 +1631,45 @@ def amenities_score(amenity_list, categories):
     percent = total / len(categories) if categories else 0
     return score_dict, total, percent
 
-from decimal import Decimal, ROUND_HALF_UP
-import math
+class AmenityScoreService:
+    @staticmethod
+    def get_score_class(percentage):
+        try:
+            value = float(percentage)
+            if value <= 50:
+                return "bg-danger"
+            elif value <= 69:
+                return "bg-warning"
+            else:
+                return "bg-success"
+        except (ValueError, TypeError):
+            return "bg-secondary"
 
+    @staticmethod
+    def get_score_text_class(percentage):
+        try:
+            value = float(percentage)
+            if value <= 50:
+                return "text-danger"
+            elif value <= 69:
+                return "text-warning"
+            else:
+                return "text-success"
+        except (ValueError, TypeError):
+            return "text-secondary"
+
+    @staticmethod
+    def get_score_status(percentage):
+        try:
+            value = float(percentage)
+            if value <= 50:
+                return "Needs Improvement"
+            elif value <= 69:
+                return "Moderate Coverage"
+            else:
+                return "Good Coverage"
+        except (ValueError, TypeError):
+            return "Unknown Status"
 
 class CalculatorService:
     """Service class for HDB affordability calculations"""

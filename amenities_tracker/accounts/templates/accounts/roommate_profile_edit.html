@@ -82,7 +82,8 @@
             <div class="alert alert-{{ message.tags|default:'info' }} mb-3">{{ message }}</div>
           {% endfor %}
         {% endif %}
-
+        
+        <!-- Update the form section with these fields -->
         <form method="post" class="form-grid">
           {% csrf_token %}
 
@@ -90,62 +91,100 @@
             <div class="alert alert-danger">{{ form.non_field_errors }}</div>
           {% endif %}
 
-          <!-- Name (kept same logic) -->
-          <div class="row g-3 mb-1">
-            <div class="col-12 col-md-6">
-              <label class="form-label">Name</label>
-              {% if form.display_name %}
-                <div class="input-icon">
-                  <i class="bi bi-person"></i>
-                  {{ form.display_name }}
-                </div>
-              {% elif form.name %}
-                <div class="input-icon">
-                  <i class="bi bi-person"></i>
-                  {{ form.name }}
-                </div>
-              {% else %}
-                <div class="input-icon">
-                  <i class="bi bi-person"></i>
-                  <input type="text" name="display_name" class="form-control"
-                         value="{{ user.get_full_name|default:user.username|default:user.email }}">
-                </div>
-                <div class="form-text">Add a name other users will see.</div>
-              {% endif %}
+          <!-- Name field -->
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <label class="form-label">Display Name</label>
+              <div class="input-icon">
+                <i class="bi bi-person"></i>
+                <input type="text" 
+                      name="display_name" 
+                      class="form-control"
+                      value="{{ form.initial.display_name|default:user.get_full_name|default:user.username }}"
+                      required>
+              </div>
+              <div class="hint mt-1">This is how other users will see you</div>
             </div>
           </div>
 
-          <!-- Other fields  -->
-          <div class="row g-3">
-            {% for field in form.visible_fields %}
-              {% if field.name not in 'preferred_neighbourhoods neighbourhoods_csv' %}
-                <div class="col-12 col-md-6">
-                  <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                  {{ field }}
-                  {% if field.help_text %}
-                    <div class="form-text">{{ field.help_text|safe }}</div>
-                  {% endif %}
-                  {% for e in field.errors %}
-                    <div class="invalid-feedback d-block">{{ e }}</div>
-                  {% endfor %}
-                </div>
-              {% endif %}
-            {% endfor %}
+          <!-- Basic Info -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Age</label>
+              <select name="age_range" class="form-select" required>
+                <option value="">Select age range</option>
+                <option value="18-24" {% if form.initial.age_range == '18-24' %}selected{% endif %}>18-24 years</option>
+                <option value="25-34" {% if form.initial.age_range == '25-34' %}selected{% endif %}>25-34 years</option>
+                <option value="35-44" {% if form.initial.age_range == '35-44' %}selected{% endif %}>35-44 years</option>
+                <option value="45+" {% if form.initial.age_range == '45+' %}selected{% endif %}>45+ years</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Gender</label>
+              <select name="gender" class="form-select" required>
+                <option value="">Select gender</option>
+                <option value="male" {% if form.initial.gender == 'male' %}selected{% endif %}>Male</option>
+                <option value="female" {% if form.initial.gender == 'female' %}selected{% endif %}>Female</option>
+                <option value="other" {% if form.initial.gender == 'other' %}selected{% endif %}>Other</option>
+              </select>
+            </div>
           </div>
 
-          <!-- Single neighbourhood CSV input (unchanged logic) -->
-          <div class="mt-3">
-            <label for="id_neighbourhoods_csv" class="form-label">Preferred neighbourhoods</label>
-            <div class="input-icon">
-              <i class="bi bi-geo-alt"></i>
-              <input type="text"
-                     name="neighbourhoods_csv"
-                     id="id_neighbourhoods_csv"
-                     class="form-control"
-                     placeholder="e.g., Toa Payoh, Bishan, Serangoon"
-                     value="{{ form.initial.neighbourhoods_csv }}">
+          <!-- Preferences -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Occupation</label>
+              <select name="occupation" class="form-select" required>
+                <option value="">Select occupation</option>
+                <option value="student" {% if form.initial.occupation == 'student' %}selected{% endif %}>Student</option>
+                <option value="working" {% if form.initial.occupation == 'working' %}selected{% endif %}>Working Professional</option>
+                <option value="other" {% if form.initial.occupation == 'other' %}selected{% endif %}>Other</option>
+              </select>
             </div>
-            <div class="hint mt-2">Separate by commas. We’ll match with people who prefer any of these areas.</div>
+
+            <div class="col-md-6">
+              <label class="form-label">Lifestyle</label>
+              <select name="lifestyle" class="form-select" required>
+                <option value="">Select lifestyle</option>
+                <option value="early_bird" {% if form.initial.lifestyle == 'early_bird' %}selected{% endif %}>Early Bird</option>
+                <option value="night_owl" {% if form.initial.lifestyle == 'night_owl' %}selected{% endif %}>Night Owl</option>
+                <option value="flexible" {% if form.initial.lifestyle == 'flexible' %}selected{% endif %}>Flexible</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Location Preferences -->
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <label class="form-label">Preferred Neighbourhoods</label>
+              <div class="input-icon">
+                <i class="bi bi-geo-alt"></i>
+                <input type="text"
+                      name="neighbourhoods_csv"
+                      class="form-control"
+                      placeholder="e.g., Toa Payoh, Bishan, Serangoon"
+                      value="{{ form.initial.neighbourhoods_csv }}"
+                      required>
+              </div>
+              <div class="hint mt-1">Separate multiple locations with commas</div>
+            </div>
+          </div>
+
+          <!-- Budget -->
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <label class="form-label">Monthly Budget</label>
+              <div class="input-icon">
+                <i class="bi bi-currency-dollar"></i>
+                <input type="number"
+                      name="budget"
+                      class="form-control"
+                      placeholder="Your monthly rental budget"
+                      value="{{ form.initial.budget }}"
+                      required>
+              </div>
+            </div>
           </div>
 
           <div class="divider"></div>

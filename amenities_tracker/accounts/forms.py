@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import CustomUser
+from .models import CustomUser, RoommateProfile
 from .models import RoommateProfile, GENDER_CHOICES, RACE_CHOICES
 import re
 
@@ -72,33 +72,47 @@ class AmenitiesSearchForm(forms.Form):
         return postal_code
 
 class RoommateProfileForm(forms.ModelForm):
-    neighbourhoods_csv = forms.CharField(
-        required=False,
-        label="Preferred neighbourhoods (comma-separated)",
-        help_text="e.g., Toa Payoh, Tampines, Punggol",
-    )
-
     class Meta:
         model = RoommateProfile
-        fields = ["age", "gender", "race", "max_budget", "is_looking"]
+        fields = [
+            'display_name',
+            'age_range',
+            'gender',
+            'occupation',
+            'lifestyle',
+            'neighbourhoods_csv',
+            'budget'
+        ]
         widgets = {
-            "gender": forms.Select(choices=GENDER_CHOICES),
-            "race": forms.Select(choices=RACE_CHOICES),
+            'display_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Your display name'
+            }),
+            'age_range': forms.Select(attrs={'class': 'form-select'}),
+            'gender': forms.Select(attrs={'class': 'form-select'}),
+            'occupation': forms.Select(attrs={'class': 'form-select'}),
+            'lifestyle': forms.Select(attrs={'class': 'form-select'}),
+            'budget': forms.NumberInput(attrs={
+                'placeholder': 'e.g. 800',
+                'class': 'form-control'
+            }),
+            'neighbourhoods_csv': forms.TextInput(attrs={
+                'placeholder': 'e.g. Tampines, Pasir Ris, Bedok',
+                'class': 'form-control'
+            })
         }
 
     def clean(self):
         data = super().clean()
-
         csv = self.data.get("neighbourhoods_csv", "") or data.get("neighbourhoods_csv", "")
         raw_items = [s.strip() for s in csv.split(",") if s.strip()]
-
+        
         canon_map = {n.lower(): n for n in VALID_NEIGHBOURHOODS}
-
         invalid = [s for s in raw_items if s.lower() not in canon_map]
+        
         if invalid:
-            raise forms.ValidationError("Invalid neighbourhood input.")
-
-        data["preferred_neighbourhoods"] = [canon_map[s.lower()] for s in raw_items]
+            raise forms.ValidationError(f"Invalid neighbourhoods: {', '.join(invalid)}")
+        
         return data
 
 VALID_NEIGHBOURHOODS = {

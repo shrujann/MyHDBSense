@@ -25,6 +25,63 @@
     .pm-score .progress { height:6px; }
     .pm-score .progress-bar { background-color:#0d6efd; }
 
+    .filter-strip {
+      display: flex;
+      overflow-x: auto;
+      gap: 0.8rem;
+      padding: 0.5rem;
+      margin: 1rem 0;
+      scrollbar-width: none; 
+      -ms-overflow-style: none; 
+    }
+
+    .filter-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1.25rem;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(10,31,68,.04);
+    }
+
+    .filter-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 12px rgba(10,31,68,.08);
+    }
+
+    .filter-chip.active {
+      background: #0b0d14;
+      color: #fff;
+      border-color: #0b0d14;
+    }
+
+    .filter-chip i {
+      font-size: 1.1rem;
+    }
+
+    .filter-count {
+      background: #eef2f6;
+      color: #111;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .filter-chip.active .filter-count {
+      background: #1f2430;
+      color: #fff;
+    }
+
     .search-card.mhs-card{
       background:#fff; border:1px solid var(--border); border-radius:var(--card-r);
       box-shadow:0 6px 16px rgba(10,31,68,.06);
@@ -68,11 +125,11 @@
 
       <div class="alert alert-light mt-3 border text-muted small mb-0">
         <i class="bi bi-info-circle me-2"></i>
-        <b>Tip:</b> You can also paste a block + street (e.g., <em>10 EVERTON RD</em>). Exact match on 6-digit postal codes.
+        <b>Tip: </b>You can also enter a sector code, e.g. 11 for Bukit Timah.
       </div>
     </section>
 
-    <!-- Search Filters (optional include slot) -->
+    <!-- Search Filters -->
     <section class="filter-holder"></section>
 
     <!-- Recommended top 3 (cheapest) -->
@@ -84,7 +141,6 @@
               <h5 class="fw-bold mb-1">
                 <i class="bi bi-lightning-charge me-2 text-primary"></i> Recommended for You
               </h5>
-              <p class="text-muted small mb-0">Properties that match your preferences and budget.</p>
             </div>
           </div>
 
@@ -96,41 +152,43 @@
     <!-- All Listings -->
     <section class="list-holder">
       <h4 class="fw-bold mb-3">All Listings</h4>
-      <!-- Flat Type Filter Buttons -->
-      <div class="filter-strip mb-4" id="flatTypeFilter">
-          <span class="filter-chip active" data-type="All">
-              <i class="bi bi-building"></i>
-              <span>All Types</span>
-          </span>
-          <span class="filter-chip" data-type="1 ROOM">
-              <i class="bi bi-door-open"></i>
-              <span>1 ROOM</span>
-          </span>
-          <span class="filter-chip" data-type="2 ROOM">
-              <i class="bi bi-door-open"></i>
-              <span>2 ROOM</span>
-          </span>
-          <span class="filter-chip" data-type="3 ROOM">
-              <i class="bi bi-door-open"></i>
-              <span>3 ROOM</span>
-          </span>
-          <span class="filter-chip" data-type="4 ROOM">
-              <i class="bi bi-door-open"></i>
-              <span>4 ROOM</span>
-          </span>
-          <span class="filter-chip" data-type="5 ROOM">
-              <i class="bi bi-door-open"></i>
-              <span>5 ROOM</span>
-          </span>
-          <span class="filter-chip" data-type="EXECUTIVE">
-              <i class="bi bi-briefcase"></i>
-              <span>EXECUTIVE</span>
-          </span>
-          <span class="filter-chip" data-type="MULTI-GENERATION">
-              <i class="bi bi-people"></i>
-              <span>MULTI-GENERATION</span>
-          </span>
-      </div>
+        <section class="filter-strip" id="flatTypeFilter">
+          <button type="button" class="filter-chip active" data-type="All">
+            <i class="bi bi-buildings"></i>
+            All Types
+            <span class="filter-count">0</span>
+          </button>
+          <button type="button" class="filter-chip" data-type="1 ROOM">
+            <i class="bi bi-house-door"></i>
+            1 Room
+            <span class="filter-count">0</span>
+          </button>
+          <button type="button" class="filter-chip" data-type="2 ROOM">
+            <i class="bi bi-house-door"></i>
+            2 Room
+            <span class="filter-count">0</span>
+          </button>
+          <button type="button" class="filter-chip" data-type="3 ROOM">
+            <i class="bi bi-house-door"></i>
+            3 Room
+            <span class="filter-count">0</span>
+          </button>
+          <button type="button" class="filter-chip" data-type="4 ROOM">
+            <i class="bi bi-house-door"></i>
+            4 Room
+            <span class="filter-count">0</span>
+          </button>
+          <button type="button" class="filter-chip" data-type="5 ROOM">
+            <i class="bi bi-house-door"></i>
+            5 Room
+            <span class="filter-count">0</span>
+          </button>
+          <button type="button" class="filter-chip" data-type="EXECUTIVE">
+            <i class="bi bi-building"></i>
+            Executive
+            <span class="filter-count">0</span>
+          </button>
+        </section>
 
       <div id="allProperties" class="row g-4"></div>
       <div id="emptyState" class="alert alert-light border text-muted small d-none mt-3" role="status" aria-live="polite">
@@ -191,22 +249,18 @@
             <div class="col-12"><i class="bi bi-geo-alt me-1"></i><span id="pmAddress" class="fw-semibold">—</span></div>
           </div>
 
-          <!-- Demo Amenity Score -->
-          <div class="pm-score rounded-3 p-3 border mb-3">
+          <!-- View Amenities -->
+          <div class="p-3 border rounded-3 mb-3 bg-light">
             <div class="d-flex align-items-center gap-2 mb-2">
-              <i class="bi bi-star-fill text-warning"></i>
-              <span class="fw-semibold">Neighborhood Amenity Score</span>
-              <span class="badge bg-light text-dark ms-auto" id="pmScore">—</span>
+              <i class="bi bi-geo-circle text-primary"></i>
+              <span class="fw-semibold">Explore Nearby Amenities</span>
             </div>
-            <div class="small mb-1">Food & Dining <span class="float-end" id="pmScoreFD">8.5</span></div>
-            <div class="progress mb-2"><div class="progress-bar" id="pmBarFD"></div></div>
-            <div class="small mb-1">Transport <span class="float-end" id="pmScoreT">9.0</span></div>
-            <div class="progress mb-2"><div class="progress-bar" id="pmBarT"></div></div>
-            <div class="small mb-1">Recreation <span class="float-end" id="pmScoreR">8.0</span></div>
-            <div class="progress mb-2"><div class="progress-bar" id="pmBarR"></div></div>
-            <div class="small mb-1">Education <span class="float-end" id="pmScoreE">9.5</span></div>
-            <div class="progress"><div class="progress-bar" id="pmBarE"></div></div>
-            <div class="small text-muted mt-2">Score based on proximity and quality of amenities within 1km radius (demo).</div>
+            <p class="text-muted small mb-3">
+              Discover food courts, parks, schools, and more amenities around this location.
+            </p>
+            <a href="{% url 'amenities' %}?q=" class="btn btn-primary w-100" id="viewAmenitiesBtn">
+              <i class="bi bi-arrow-up-right-circle me-2"></i>View Amenities For This Area
+            </a>
           </div>
 
         </div>
@@ -305,15 +359,16 @@
 
   // Flat type filter logic
   function applyFlatTypeFilter() {
-    let filtered;
-    if (CURRENT_FLAT_FILTER === "All") {
-      filtered = ALL_PROPERTIES;
-    } else {
-      filtered = ALL_PROPERTIES.filter(p => (p.hdbFlatType || "").toUpperCase() === CURRENT_FLAT_FILTER.toUpperCase());
-    }
-    PROPERTIES = filtered;
-    renderLists();
-    document.getElementById("propertyCount").textContent = String(filtered.length);
+      let filtered;
+      if (CURRENT_FLAT_FILTER === "All") {
+          filtered = ALL_PROPERTIES;
+      } else {
+          filtered = ALL_PROPERTIES.filter(p => (p.hdbFlatType || "").toUpperCase() === CURRENT_FLAT_FILTER.toUpperCase());
+      }
+      PROPERTIES = filtered;
+      renderLists();
+      updateFilterCounts();
+      document.getElementById("propertyCount").textContent = String(filtered.length);
   }
 
   // Fetch and inject results, sets ALL_PROPERTIES
@@ -339,6 +394,7 @@
       flats = [];
     }
     ALL_PROPERTIES = (flats || []).map(normFlat); // Save base set
+    updateFilterCounts(); // Update counts when new data arrives
     applyFlatTypeFilter(); // Show current filter
   }
 
@@ -363,19 +419,21 @@
 
   // Filter chip button events
   document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll("#flatTypeFilter .filter-chip").forEach(btn => {
-      btn.addEventListener("click", function(){
-        document.querySelectorAll("#flatTypeFilter .filter-chip").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        CURRENT_FLAT_FILTER = btn.getAttribute("data-type");
-        applyFlatTypeFilter();
+      const filterStrip = document.getElementById("flatTypeFilter");
+      if (!filterStrip) return;
+
+      filterStrip.querySelectorAll(".filter-chip").forEach(btn => {
+          btn.addEventListener("click", function() {
+              filterStrip.querySelectorAll(".filter-chip").forEach(b => b.classList.remove("active"));
+              btn.classList.add("active");
+              CURRENT_FLAT_FILTER = btn.getAttribute("data-type");
+              applyFlatTypeFilter();
+          });
       });
-    });
-    // Initial base assignments if properties exist from server
-    if (typeof PROPERTIES !== "undefined" && PROPERTIES.length > 0) {
-      ALL_PROPERTIES = PROPERTIES.slice();
-      applyFlatTypeFilter();
-    }
+
+      if (ALL_PROPERTIES.length > 0) {
+          updateFilterCounts();
+      }
   });
 
   // Modal logic (unchanged)
@@ -390,30 +448,112 @@
   });
 
   function populatePropertyModal(p) {
-    document.getElementById("pmTitle").textContent = p.title || 'HDB Listing';
-    document.getElementById("pmType").textContent = p.propertyType || "HDB";
-    document.getElementById("pmFlatType").textContent = p.hdbFlatType || "—";
-    document.getElementById("pmVerified").classList.add("d-none");
-    document.getElementById("pmImg1").src = UNIVERSAL_IMG;
-    document.getElementById("pmImg2").src = UNIVERSAL_IMG;
-    document.getElementById("pmImg3").src = UNIVERSAL_IMG;
-    document.getElementById("pmPrice").textContent = p.price!=null ? '$'+money(p.price) : '—';
-    const psqm = (p.price!=null && p.sqft) ? (p.price / p.sqft) : null;
-    document.getElementById("pmPsf").textContent   = psqm!=null ? '$'+Number(psqm).toLocaleString('en-SG') : '—';
-    document.getElementById("pmSqft").textContent  = p.sqft != null ? p.sqft : "—";
-    document.getElementById("pmLease").textContent = p.remainingLease || "—";
-    document.getElementById("pmAddress").textContent = p.address || "—";
-    document.getElementById("pmTownModel").textContent =
-      [p.region, p.hdbFlatType].filter(Boolean).join(" / ") || "—";
-    const ns = 8.7;
-    document.getElementById("pmScore").textContent = `${ns.toFixed(1)}/10`;
-    setBar("pmBarFD","85%"); document.getElementById("pmScoreFD").textContent="8.5";
-    setBar("pmBarT","90%");  document.getElementById("pmScoreT").textContent="9.0";
-    setBar("pmBarR","80%");  document.getElementById("pmScoreR").textContent="8.0";
-    setBar("pmBarE","95%");  document.getElementById("pmScoreE").textContent="9.5";
+      // Basic property details
+      document.getElementById("pmTitle").textContent = p.title || 'HDB Listing';
+      document.getElementById("pmType").textContent = p.propertyType || "HDB";
+      document.getElementById("pmFlatType").textContent = p.hdbFlatType || "—";
+      
+      // Price and size information
+      document.getElementById("pmPrice").textContent = p.price != null ? '$' + money(p.price) : '—';
+      document.getElementById("pmSqft").textContent = p.sqft != null ? p.sqft : "—";
+      document.getElementById("pmLease").textContent = p.remainingLease || "—";
+      
+      // Location details
+      document.getElementById("pmAddress").textContent = p.address || "—";
+      document.getElementById("pmTownModel").textContent = 
+          [p.region, p.hdbFlatType].filter(Boolean).join(" / ") || "—";
+
+      // Set default image
+      document.getElementById("pmImg1").src = UNIVERSAL_IMG;
+      document.getElementById("pmImg2").src = UNIVERSAL_IMG;
+      document.getElementById("pmImg3").src = UNIVERSAL_IMG;
+
+      // Get postal code from either the property data or the search input
+      let postalCode = '';
+      if (p._raw && p._raw.postal) {
+          postalCode = p._raw.postal;
+      } else {
+          const searchInput = document.querySelector('input[name="q"]');
+          postalCode = searchInput ? searchInput.value.trim() : '';
+      }
+
+      const amenitiesBtn = document.getElementById('viewAmenitiesBtn');
+      if (amenitiesBtn) {
+          const baseUrl = amenitiesBtn.getAttribute('href').split('?')[0];
+          amenitiesBtn.href = `${baseUrl}?q=${encodeURIComponent(postalCode)}`;
+      }
+
+      // Update address display
+      const fullAddress = [
+          p.address,
+          p.region ? `${p.region} Singapore` : 'Singapore'
+      ].filter(Boolean).join(', ');
+      
+      document.getElementById("pmAddress").textContent = fullAddress || "—";
   }
+
   function setBar(id, w){ const el=document.getElementById(id); if(el) el.style.width=w; }
 
-  // Initial empty render
-  renderLists();
+  function updateFilterCounts() {
+      const counts = {
+          'All': ALL_PROPERTIES.length,
+          '1 ROOM': 0,
+          '2 ROOM': 0,
+          '3 ROOM': 0,
+          '4 ROOM': 0,
+          '5 ROOM': 0,
+          'EXECUTIVE': 0
+      };
+      
+      ALL_PROPERTIES.forEach(p => {
+          if (p.hdbFlatType && counts.hasOwnProperty(p.hdbFlatType)) {
+              counts[p.hdbFlatType]++;
+          }
+      });
+
+      const filterStrip = document.getElementById("flatTypeFilter");
+      if (!filterStrip) return;
+
+      filterStrip.querySelectorAll(".filter-chip").forEach(chip => {
+          const type = chip.getAttribute("data-type");
+          const countElement = chip.querySelector(".filter-count");
+          if (countElement) {
+              countElement.textContent = counts[type] || 0;
+          }
+      });
+  }
+
+  function renderLists(){
+      const list  = document.getElementById("allProperties");
+      const feat  = document.getElementById("featuredProperties");
+      const empty = document.getElementById("emptyState");
+      if (empty) empty.classList.add("d-none");
+
+      // Always show 3 cheapest from ALL_PROPERTIES for recommendations
+      const recommendations = ALL_PROPERTIES
+          .slice()
+          .filter(p => Number.isFinite(p.price))
+          .sort((a,b) => a.price - b.price)
+          .slice(0, 3);
+
+      if(!PROPERTIES.length){
+          if (list) list.innerHTML = "";
+          if (empty) empty.classList.remove("d-none");
+          const cnt = document.getElementById("propertyCount");
+          if (cnt) cnt.textContent = "0";
+      } else {
+          if (list) list.innerHTML = PROPERTIES.map((p,i) => cardHTML(p,i)).join("");
+          const cnt = document.getElementById("propertyCount");
+          if (cnt) cnt.textContent = String(PROPERTIES.length);
+      }
+
+      // Always render recommendations regardless of filters
+      if (feat && recommendations.length > 0) {
+          feat.innerHTML = recommendations.map((p,i) => cardHTML(p,i)).join("");
+      } else if (feat) {
+          feat.innerHTML = "";
+      }
+
+      window.MHS_PROPERTIES = PROPERTIES;
+  }
 </script>

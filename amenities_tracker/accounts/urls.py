@@ -24,7 +24,11 @@ urlpatterns = [
     path('verify-otp/<int:user_id>/', views.verify_otp, name='verify_otp'), # OTP verification view
     path('login/', views.login_view, name='login'), # login view
     path('logout/', views.logout_view, name='logout'), # logout view
-    path('password-reset/', auth_views.PasswordResetView.as_view(template_name='accounts/password_reset.html'), name='password_reset'),
+
+    path('password-reset/', auth_views.PasswordResetView.as_view(template_name='accounts/password_reset.html'), name='password_reset'), 
+    path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='accounts/password_reset_done.html'), name='password_reset_done'),
+    path('password-reset-confirm/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='accounts/password_reset_confirm.html'), name='password_reset_confirm'),   
+    path('password-reset-complete/', auth_views.PasswordResetCompleteView.as_view(template_name='accounts/password_reset_complete.html'), name='password_reset_complete'),
 
     path('home/', views.home, name='home'), # home view
 

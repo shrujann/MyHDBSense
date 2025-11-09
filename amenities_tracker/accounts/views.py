@@ -1,19 +1,18 @@
 from django.db.models import Q
 from .models import RoommateProfile, ContactAttempt, CustomUser
-from django.contrib.auth import get_user_model, login
+from django.contrib.auth import get_user_model, login, authenticate, logout
 from django.core.mail import send_mail
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate, logout
 from django_otp.plugins.otp_email.models import EmailDevice
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from .forms import RoommateProfileForm, SharingRequestForm, ContactMessageForm, OTPForm, CustomUserCreationForm, LoginForm, AmenitiesSearchForm, CalculatorForm
-from .models import CustomUser
 from urllib.parse import quote as urlquote, urlparse
 from . import services
-from .services import CalculatorService
+from .services import CalculatorService, AmenityScoreService
+from django.contrib.auth.forms import PasswordResetForm
 
 def _back_with_query(request, default_name="home"):
     ref = request.META.get("HTTP_REFERER")
@@ -58,10 +57,18 @@ def verify_otp(request, user_id):
     user = get_object_or_404(User, pk=user_id)
     device = EmailDevice.objects.filter(user=user, name="default").first()
 
-    # resend
-    if request.GET.get("resend") == "1" and device:
-        device.generate_challenge()
-        messages.success(request, "A new code was sent to your email.", extra_tags="otp")
+    # Handle case where device doesn't exist
+    if not device:
+        messages.error(request, "OTP device not found. Please register again.", extra_tags="otp")
+        return redirect("home")
+
+    # Handle resend request
+    if request.GET.get("resend") == "1":
+        try:
+            device.generate_challenge()
+            messages.success(request, "A new code has been sent to your email.", extra_tags="otp")
+        except Exception as e:
+            messages.error(request, "Failed to send OTP. Please try again or register again.", extra_tags="otp")
         return redirect("verify_otp", user_id=user_id)
 
     if request.method == "POST":
@@ -73,7 +80,7 @@ def verify_otp(request, user_id):
             user.save()
             login(request, user)
             return redirect("home")
-        messages.error(request, "Invalid or expired code. Try again.", extra_tags="otp")
+        messages.error(request, "Invalid or expired code. Try again or request a new code.", extra_tags="otp")
         return redirect("verify_otp", user_id=user_id)
 
     return render(request, "accounts/verify_otp.html", {"user_id": user_id})
@@ -112,33 +119,53 @@ def login_view(request):
 # Logout view
 def logout_view(request):
     logout(request)
-    return redirect("login")  # Redirect to login page after logout
+    return redirect("login")  
 
 def password_reset_modal(request):
     if request.method == "POST":
         form = PasswordResetForm(request.POST)
         if form.is_valid():
-            # Sends email if account with that email exists.
-            form.save(
-                request=request,
-                use_https=request.is_secure(),
-                email_template_name="registration/password_reset_email.html",  
-            )
-            messages.success(
-                request,
-                "If an account exists with that email, we've sent instructions to reset your password.",
-                extra_tags="auth" 
-            )
-            return redirect(_back_with_query(request) + "showLogin=true")
+            email = form.cleaned_data['email']
+            associated_users = User.objects.filter(email=email)
+            
+            if associated_users.exists():
+                try:
+                    form.save(
+                        request=request,
+                        use_https=request.is_secure(),
+                        subject_template_name="registration/password_reset_subject.txt",
+                        email_template_name="registration/password_reset_email.html",
+                        from_email=None 
+                    )
+                    messages.success(
+                        request,
+                        "Password reset instructions have been sent to your email.",
+                        extra_tags="auth"
+                    )
+                except Exception as e:
+                    messages.error(
+                        request,
+                        "Failed to send password reset email. Please try again.",
+                        extra_tags="reset"
+                    )
+            else:
+                # Don't reveal whether a user account exists
+                messages.success(
+                    request,
+                    "If an account exists with that email, we've sent instructions to reset your password.",
+                    extra_tags="auth"
+                )
+            return redirect("password_reset_done")
         else:
             err = form.errors.get("email")
             msg = "Enter a valid email address."
             if err:
                 msg = " ".join([e for e in err])
             messages.error(request, msg, extra_tags="reset")
-            return redirect(_back_with_query(request) + "showReset=true")
+            return redirect("password_reset")
 
-    return redirect(_back_with_query(request) + "showReset=true")
+    form = PasswordResetForm()
+    return render(request, "accounts/password_reset.html", {"form": form})
 
 # home view
 def home(request):
@@ -180,19 +207,53 @@ def search_flats(request):
 
 @login_required
 def roommate_profile_edit(request):
-    profile, _ = RoommateProfile.objects.get_or_create(user=request.user)
-    if request.method == "POST":
-        form = RoommateProfileForm(request.POST, instance=profile)
-        if form.is_valid():
-            p = form.save(commit=False)
-            p.preferred_neighbourhoods = form.cleaned_data.get("preferred_neighbourhoods", [])
-            p.save()
-            messages.success(request, "Roommate profile updated.")
-            return redirect("roommate_profile_edit")
-    else:
-        initial_csv = ", ".join(profile.preferred_neighbourhoods or [])
-        form = RoommateProfileForm(instance=profile, initial={"neighbourhoods_csv": initial_csv})
-    return render(request, "accounts/roommate_profile_edit.html", {"form": form})
+    try:
+        profile = RoommateProfile.objects.get(user=request.user)
+    except RoommateProfile.DoesNotExist:
+        profile = None
+
+    if request.method == 'POST':
+        form_data = request.POST.copy()
+        
+        if profile:
+            profile.display_name = form_data.get('display_name')
+            profile.age_range = form_data.get('age_range')
+            profile.gender = form_data.get('gender')
+            profile.occupation = form_data.get('occupation')
+            profile.lifestyle = form_data.get('lifestyle')
+            profile.neighbourhoods_csv = form_data.get('neighbourhoods_csv')
+            profile.budget = form_data.get('budget')
+            profile.save()
+        else:
+            profile = RoommateProfile.objects.create(
+                user=request.user,
+                display_name=form_data.get('display_name'),
+                age_range=form_data.get('age_range'),
+                gender=form_data.get('gender'),
+                occupation=form_data.get('occupation'),
+                lifestyle=form_data.get('lifestyle'),
+                neighbourhoods_csv=form_data.get('neighbourhoods_csv'),
+                budget=form_data.get('budget')
+            )
+
+        messages.success(request, 'Profile updated successfully!')
+        return redirect('roommate_profile_edit')
+
+    initial_data = {}
+    if profile:
+        initial_data = {
+            'display_name': profile.display_name,
+            'age_range': profile.age_range,
+            'gender': profile.gender,
+            'occupation': profile.occupation,
+            'lifestyle': profile.lifestyle,
+            'neighbourhoods_csv': profile.neighbourhoods_csv,
+            'budget': profile.budget
+        }
+
+    return render(request, 'accounts/roommate_profile_edit.html', {
+        'form': {'initial': initial_data}
+    })
 
 @login_required
 def sharing_request(request):
@@ -301,10 +362,28 @@ def search_amenities(request):
 
 @login_required
 def amenities(request):
-    """
-    Main amenities page view - handles both display and search.
-    """
-    return search_amenities(request)
+    amenities_data = [] 
+   
+    total_categories = 14  # Total number of amenity categories
+    found_categories = len(set(a['type'] for a in amenities_data))
+    score = found_categories
+    percentage = round((score / total_categories) * 100)
+    
+    # Use the AmenityScoreService for score styling
+    score_class = AmenityScoreService.get_score_class(percentage)
+    score_text_class = AmenityScoreService.get_score_text_class(percentage)
+    score_status = AmenityScoreService.get_score_status(percentage)
+    
+    context = {
+        'amenities': amenities_data,
+        'score': score,
+        'percentage': percentage,
+        'score_class': score_class,
+        'score_text_class': score_text_class,
+        'score_status': score_status
+    }
+    
+    return render(request, 'accounts/amenities.html', context)
 
 @login_required
 def properties(request):

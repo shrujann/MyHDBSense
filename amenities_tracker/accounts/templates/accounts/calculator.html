@@ -30,11 +30,10 @@
     .page-title{ font-weight:800; font-size:2.4rem; letter-spacing:-.01em; }
     .page-sub{ color:var(--muted); font-size:1.02rem; }
 
-    /* Main card (inputs) — centered, same look as your other pages */
     .mhs-card{
       background:#fff; border:1px solid var(--border); border-radius:20px;
       box-shadow:0 10px 26px rgba(10,31,68,.06);
-      max-width:880px; margin:0 auto;  /* centered card under the left-aligned heading */
+      max-width:880px; margin:0 auto;  
     }
     .section-caption{ font-weight:700; }
 
@@ -50,7 +49,7 @@
       background:var(--btn); border-color:var(--btn); border-radius:999px;
       padding:1rem 1.1rem; font-weight:800; letter-spacing:.1px;
     }
-    .cta:hover{ background:#0b0f1a; border-color:#0b0f1a; }
+    .cta:hover{ background:#2563eb; border-color:#2563eb; }
 
     /* Results */
     #results{ max-width:880px; margin:0 auto; }
@@ -89,7 +88,7 @@
   <!-- Include Navbar -->
   {% include "accounts/navbar.html" %}
 
-  <main class="calc-wrap px-3 px-md-4 py-4 py-lg-5">
+  <main class="container py-4">
     {% if messages %}
       <div class="mb-3">
         {% for message in messages %}
@@ -102,10 +101,10 @@
       </div>
     {% endif %}
 
-    <!-- Left-aligned header; card below is centered as in your screenshots -->
+    <!-- Left-aligned header -->
     <header class="mb-4">
-      <h2 class="page-title mb-1">HDB Affordability Calculator</h2>
-      <p class="page-sub mb-0">Calculate your HDB affordability with TDSR/MSR rules and CPF OA integration.</p>
+      <h2 class="mb-1">HDB Affordability Calculator</h2>
+      <p class="text-muted mb-0">Calculate your HDB affordability with TDSR/MSR rules and CPF OA integration.</p>
     </header>
 
     <!-- Input Card -->
@@ -164,7 +163,7 @@
         </div>
 
         <div class="col-12">
-          <button type="submit" class="btn cta w-100">Calculate My HDB Affordability</button>
+          <button type="submit" class="btn cta w-100 text-white">Calculate My HDB Affordability</button>
         </div>
       </form>
     </section>

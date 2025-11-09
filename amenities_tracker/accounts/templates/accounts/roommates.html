@@ -62,11 +62,23 @@
         <div class="row g-3 align-items-end">
           <div class="col-6 col-md-2">
             <label class="form-label small text-muted mb-1">Min age</label>
-            <input type="number" name="min_age" min="16" class="form-control" placeholder="e.g. 20">
+            <input type="number" 
+                  name="min_age" 
+                  min="21" 
+                  max="109" 
+                  class="form-control" 
+                  placeholder="e.g. 21"
+                  id="minAge">
           </div>
           <div class="col-6 col-md-2">
             <label class="form-label small text-muted mb-1">Max age</label>
-            <input type="number" name="max_age" min="16" class="form-control" placeholder="e.g. 30">
+            <input type="number" 
+                  name="max_age" 
+                  min="21" 
+                  max="110" 
+                  class="form-control" 
+                  placeholder="e.g. 30"
+                  id="maxAge">
           </div>
 
           <div class="col-12 col-md-4">
@@ -160,16 +172,6 @@
     </div>
   </div>
 
-  <!-- Toast -->
-  <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
-    <div id="toast" class="toast text-bg-dark align-items-center border-0" role="alert">
-      <div class="d-flex">
-        <div class="toast-body" id="toastMsg">Sent!</div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-      </div>
-    </div>
-  </div>
-
   <!-- Bootstrap bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -178,10 +180,6 @@
     function getCookie(name){
       const m = document.cookie.match(new RegExp('(^| )'+name+'=([^;]+)'));
       return m ? decodeURIComponent(m[2]) : null;
-    }
-    function showToast(msg){
-      document.getElementById('toastMsg').textContent = msg;
-      new bootstrap.Toast(document.getElementById('toast')).show();
     }
     function triggerLogin(){
       const u = new URL(window.location.href);
@@ -239,33 +237,23 @@
 
     function renderResultsFromSharingHTML(html){
       const mount = document.getElementById('results');
-      const empty = document.getElementById('emptyState');
       mount.innerHTML = '';
 
       const doc = new DOMParser().parseFromString(html, 'text/html');
-      // Try to find the list that sits right after <h3>Matches</h3>
       const h3 = Array.from(doc.querySelectorAll('h3')).find(h => /matches/i.test(h.textContent));
       let list = null;
       if (h3){
         list = h3.nextElementSibling;
       }
-      // If not found, fallback to first <ul>
       if (!list) list = doc.querySelector('ul');
 
-      if (!list){
-        empty.classList.remove('d-none');
+      if (!list || !list.querySelectorAll('li').length){
+        mount.innerHTML = `<div class="col-12"><div class="text-muted text-center py-4">No roommates found matching your criteria.</div></div>`;
         document.getElementById('matchCount').textContent = '0';
         return;
       }
 
       const items = Array.from(list.querySelectorAll('li'));
-      if (!items.length){
-        empty.classList.remove('d-none');
-        document.getElementById('matchCount').textContent = '0';
-        return;
-      }
-      empty.classList.add('d-none');
-
       items.forEach(li => mount.appendChild(liToCard(li)));
       document.getElementById('matchCount').textContent = String(items.length);
     }
@@ -296,6 +284,24 @@
       // auto-load results (empty POST)
       const f = document.getElementById('searchForm');
       postSharingRequest(f).catch(console.error);
+
+      const minAgeInput = document.getElementById('minAge');
+      const maxAgeInput = document.getElementById('maxAge');
+
+      function validateAgeRange() {
+          const minAge = parseInt(minAgeInput.value) || 21;
+          const maxAge = parseInt(maxAgeInput.value) || 110;
+
+          if (minAge > maxAge) {
+              maxAgeInput.value = minAge;
+          }
+
+          minAgeInput.max = maxAge;
+          maxAgeInput.min = minAge;
+      }
+
+      minAgeInput.addEventListener('change', validateAgeRange);
+      maxAgeInput.addEventListener('change', validateAgeRange);
     });
 
     // Submit search via AJAX
@@ -341,24 +347,27 @@
       const href = form.getAttribute('action');
       const fd = new FormData(form);
 
-      const res = await fetch(href, {
-        method:'POST',
-        headers:{ 'X-CSRFToken': getCookie('csrftoken') || fd.get('csrfmiddlewaretoken') || '' },
-        body: fd,
-        redirect: 'follow',
-        credentials: 'same-origin'
-      });
+      try {
+        const res = await fetch(href, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') || fd.get('csrfmiddlewaretoken') || '' },
+          body: fd,
+          redirect: 'follow',
+          credentials: 'same-origin'
+        });
 
-      if (res.redirected && /login|signin/i.test(res.url)){
-        // login required
-        triggerLogin();
-        return;
+        if (res.redirected && /login|signin/i.test(res.url)) {
+          triggerLogin();
+          return;
+        }
+
+        const modalElement = document.getElementById('contactModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        modalInstance.hide();
+        form.reset();
+      } catch (err) {
+        console.error(err);
       }
-
-      // On success, your view redirects back to sharing_request; we just show a toast.
-      new bootstrap.Modal(document.getElementById('contactModal')).hide();
-      showToast('Message sent!');
-      form.reset();
     });
   </script>
 </body>
