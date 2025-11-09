@@ -94,31 +94,12 @@ You can install all requirements in one line:
 pip install -r requirements.txt
 ```
 
-***
-
-## Contributing
-
-If you’d like to contribute:
-- Fork the repo and submit a pull request
-- File Issues or feature requests
-- See [`amenities_tracker/accounts/`](amenities_tracker/accounts/) and [`amenities_tracker/mappage/`](amenities_tracker/mappage/) for main source code
-
-***
 
 ## License, Contact & Credits
 
 Project for NTU SC2006  
-Original authors: [shrujann](https://github.com/shrujann), [ZachZYL](https://github.com/ZachZYL), [TomTang05](https://github.com/TomTang05), [MABSTAN](https://github.com/MABSTAN)
+Original authors: [shrujann](https://github.com/shrujann), [ZachZYL](https://github.com/ZachZYL), [TomTang05](https://github.com/TomTang05), [MABSTAN](https://github.com/MABSTAN), [DARIUS] (https://github.com/Daras-code)
 
 Reach us via GitHub Issues.
-
-## Project Status
-
-Active development. Latest commits include:
-- Improved data parsing for MRT and amenities
-- Enhanced UI filter chips
-- Bugfixes and database migrations
-
-***
 
 **Enjoy exploring Singapore housing smarter—with MyHDBSense!**
