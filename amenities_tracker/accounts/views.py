@@ -291,6 +291,7 @@ def sharing_request(request):
         if form.is_valid():
             qs = RoommateProfile.objects.filter(is_looking=True).exclude(user=request.user)
 
+            # Get form data
             min_age = form.cleaned_data.get("min_age")
             max_age = form.cleaned_data.get("max_age")
             gender = form.cleaned_data.get("gender") or ""
@@ -299,16 +300,44 @@ def sharing_request(request):
             n_csv = form.cleaned_data.get("neighbourhoods_csv") or ""
             filter_neigh = {s.strip().lower() for s in n_csv.split(",") if s.strip()}
 
-            if min_age: qs = qs.filter(age__gte=min_age)
-            if max_age: qs = qs.filter(age__lte=max_age)
-            if gender:  qs = qs.filter(gender=gender)
-            if race and race != "-": qs = qs.filter(race=race)
-            if max_budget: qs = qs.filter(Q(max_budget__isnull=True) | Q(max_budget__lte=max_budget))
+            # Filter by age_range (convert min/max_age to match age_range strings)
+            if min_age or max_age:
+                age_ranges = []
+                # Map age ranges that match the criteria
+                if min_age is None:
+                    min_age = 0
+                if max_age is None:
+                    max_age = 999
+                
+                # Include ranges that overlap with the requested age range
+                if min_age <= 24:
+                    age_ranges.append('18-24')
+                if min_age <= 34 and max_age >= 25:
+                    age_ranges.append('25-34')
+                if min_age <= 44 and max_age >= 35:
+                    age_ranges.append('35-44')
+                if max_age >= 45:
+                    age_ranges.append('45+')
+                
+                if age_ranges:
+                    qs = qs.filter(age_range__in=age_ranges)
+            
+            # Filter by gender
+            if gender:
+                qs = qs.filter(gender=gender)
+            
+            # Filter by budget (using 'budget' field, not 'max_budget')
+            if max_budget:
+                qs = qs.filter(budget__lte=max_budget)
 
             profiles = list(qs.select_related("user"))
+            
+            # Filter by neighbourhoods
             if filter_neigh:
                 def overlaps(p):
-                    prefs = [s.lower() for s in (p.preferred_neighbourhoods or [])]
+                    if not p.neighbourhoods_csv:
+                        return False
+                    prefs = [s.strip().lower() for s in p.neighbourhoods_csv.split(",") if s.strip()]
                     return bool(set(prefs).intersection(filter_neigh))
                 profiles = [p for p in profiles if overlaps(p)]
 
