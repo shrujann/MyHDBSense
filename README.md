@@ -98,7 +98,7 @@ pip install -r requirements.txt
 ## License, Contact & Credits
 
 Project for NTU SC2006  
-Original authors: [shrujann](https://github.com/shrujann), [ZachZYL](https://github.com/ZachZYL), [TomTang05](https://github.com/TomTang05), [MABSTAN](https://github.com/MABSTAN), [DARIUS] (https://github.com/Daras-code)
+Original authors: [shrujann](https://github.com/shrujann), [ZachZYL](https://github.com/ZachZYL), [TomTang05](https://github.com/TomTang05), [MABSTAN](https://github.com/MABSTAN), [Darius](https://github.com/Daras-code),
 
 Reach us via GitHub Issues.
 
