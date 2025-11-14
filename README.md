@@ -24,6 +24,8 @@ Built with **Django** (Python backend) and modern **HTML/CSS/JavaScript** for in
 
 ***
 
+Demo Video [Here](https://youtu.be/cNKh-C7Mq7c)
+
 ## Getting Started
 
 ### 1. Clone the repository
